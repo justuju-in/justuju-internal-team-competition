@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Justuju Internal Team Competition</title>
+  <style>
+    :root {
+      --bg: #f6f6f2;
+      --panel: #ffffff;
+      --ink: #1f2a2f;
+      --muted: #5b6a72;
+      --line: #d9dfd5;
+      --slate: #3b4753;
+      --slate-deep: #2b3540;
+      --green: #405b48;
+      --green-deep: #243a2e;
+      --accent: #ee965f;
+      --accent-soft: #fff1e8;
+      --gold: #b7791f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    header {
+      background: var(--slate-deep);
+      color: #fff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .shell {
+      width: min(1180px, calc(100vw - 28px));
+      margin: 0 auto;
+    }
+    .top { padding: 24px 0 18px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .brand img {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .brand span {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    header .subtext, header .updated {
+      color: rgb(255 255 255 / 82%);
+    }
+    .subtext, .updated, .note {
+      color: var(--muted);
+      max-width: 920px;
+    }
+    main { padding: 24px 0 44px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 800;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.35rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 16px;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button[aria-selected="true"] {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+    .tools {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input {
+      width: min(360px, 82vw);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 9px 10px;
+      font: inherit;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      vertical-align: top;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    th {
+      background: var(--slate-deep);
+      color: #fff;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+    }
+    th button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      text-align: inherit;
+      min-height: 28px;
+    }
+    td.text, th.text, th.text button { text-align: left; }
+    tbody tr:hover td { background: var(--accent-soft); }
+    a { color: var(--green-deep); font-weight: 800; }
+    th a { color: var(--accent); }
+    .rank { font-weight: 900; color: var(--green); }
+    .rank-one { color: var(--gold); }
+    .sort-mark { margin-left: 4px; color: var(--accent); }
+    .contest-link {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.72rem;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .note {
+      margin: 18px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      font-size: 0.96rem;
+    }
+    .hidden { display: none; }
+    @media (max-width: 760px) {
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .shell { width: min(100vw - 20px, 1180px); }
+      th, td { padding: 9px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell top">
+      <div class="brand">
+        <img src="assets/justuju-logo.png" alt="Justuju logo">
+        <span>Justuju</span>
+      </div>
+      <h1>Justuju Internal Team Competition</h1>
+      <div class="subtext">Team scores, individual CodeChef handles, and team rosters for internal contest practice.</div>
+      <div class="updated" id="updated"></div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="summary" id="summary"></section>
+
+    <div class="tabs" role="tablist" aria-label="Leaderboard views">
+      <button id="team-tab" role="tab" aria-selected="true" aria-controls="team-view" data-view="team">Team Leaderboard</button>
+      <button id="individual-tab" role="tab" aria-selected="false" aria-controls="individual-view" data-view="individual">Individuals</button>
+      <button id="roster-tab" role="tab" aria-selected="false" aria-controls="roster-view" data-view="roster">Team Roster</button>
+      <button id="links-tab" role="tab" aria-selected="false" aria-controls="links-view" data-view="links">Contest Links</button>
+    </div>
+
+    <div class="tools">
+      <label>Filter current table
+        <input id="search" type="search" placeholder="Type to filter">
+      </label>
+    </div>
+
+    <section id="team-view" role="tabpanel" aria-labelledby="team-tab">
+      <div class="table-wrap"><table id="team-table"></table></div>
+    </section>
+    <section id="individual-view" class="hidden" role="tabpanel" aria-labelledby="individual-tab">
+      <div class="table-wrap"><table id="individual-table"></table></div>
+    </section>
+    <section id="roster-view" class="hidden" role="tabpanel" aria-labelledby="roster-tab">
+      <div class="table-wrap"><table id="roster-table"></table></div>
+    </section>
+    <section id="links-view" class="hidden" role="tabpanel" aria-labelledby="links-tab">
+      <div class="table-wrap"><table id="links-table"></table></div>
+    </section>
+    <p class="note" id="note"></p>
+  </main>
+
+  <script>
+    const DATA = {
+      title: "Justuju Internal Team Competition",
+      generated_at: "2026-07-28T16:20:00+05:30",
+      scoring_note: "Team score is the sum of contest problems solved by all team members. Update the embedded DATA object after each contest, or regenerate this file from the Contest Scores sheet.",
+      contests: [
+        {
+          code: "START249",
+          name: "CodeChef Starters 249",
+          url: "https://www.codechef.com/START249",
+          label: "CodeChef contest",
+          note: "Tomorrow's contest. Fill solved counts after the contest."
+        }
+      ],
+      contest_links: [
+        {
+          label: "CodeChef contest",
+          code: "START249",
+          name: "CodeChef Starters 249",
+          url: "https://www.codechef.com/START249",
+          note: "Track only contest problems solved. Team rank changes by total solved."
+        }
+      ],
+      team_leaderboard: [
+        {
+          team: 1,
+          team_name: "Group 1",
+          captain: "Prateek",
+          members: 3,
+          contests: { START249: { solved: 0, active: 0 } },
+          solved_total: 0,
+          active_total: 0,
+          rank: 1
+        },
+        {
+          team: 2,
+          team_name: "Group 2",
+          captain: "Amit",
+          members: 3,
+          contests: { START249: { solved: 0, active: 0 } },
+          solved_total: 0,
+          active_total: 0,
+          rank: 2
+        },
+        {
+          team: 3,
+          team_name: "Group 3",
+          captain: "Anup",
+          members: 3,
+          contests: { START249: { solved: 0, active: 0 } },
+          solved_total: 0,
+          active_total: 0,
+          rank: 3
+        }
+      ],
+      individual_leaderboard: [
+        { name: "Prateek", codechef_handle: "", team_name: "Group 1", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 1 },
+        { name: "Rajitha", codechef_handle: "gummarajitha12", team_name: "Group 1", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 2 },
+        { name: "Pooja", codechef_handle: "poojameena21", team_name: "Group 1", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 3 },
+        { name: "Amit", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 4 },
+        { name: "Mahima", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 5 },
+        { name: "Rani", codechef_handle: "ranisingh", team_name: "Group 2", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 6 },
+        { name: "Anup", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 7 },
+        { name: "Shanti", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 8 },
+        { name: "Chhotu", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 9 }
+      ],
+      team_roster: [
+        { team: 1, team_name: "Group 1", captain: "Prateek", handles: ["Prateek", "gummarajitha12", "poojameena21"] },
+        { team: 2, team_name: "Group 2", captain: "Amit", handles: ["Amit", "Mahima", "ranisingh"] },
+        { team: 3, team_name: "Group 3", captain: "Anup", handles: ["Anup", "Shanti", "Chhotu"] }
+      ]
+    };
+
+    const contests = DATA.contests.map(contest => contest.code);
+    const displayedContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+    let currentView = "team";
+    let query = "";
+    const sortState = {
+      team: { key: "rank", direction: "asc" },
+      individual: { key: "rank", direction: "asc" },
+      roster: { key: "team_name", direction: "asc" },
+      links: { key: "code", direction: "asc" }
+    };
+
+    function number(value) {
+      return Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[ch]));
+    }
+
+    function codechefUserLink(handle) {
+      if (!handle) return "-";
+      const safeHandle = escapeHtml(handle);
+      const urlHandle = encodeURIComponent(handle);
+      if (/^(Prateek|Amit|Mahima|Anup|Shanti|Chhotu)$/i.test(handle)) return safeHandle;
+      return `<a href="https://www.codechef.com/users/${urlHandle}" target="_blank" rel="noopener noreferrer">${safeHandle}</a>`;
+    }
+
+    function compareValues(a, b, direction) {
+      const av = a ?? "";
+      const bv = b ?? "";
+      let result;
+      if (typeof av === "number" && typeof bv === "number") {
+        result = av - bv;
+      } else {
+        result = String(av).localeCompare(String(bv), "en", { numeric: true, sensitivity: "base" });
+      }
+      return direction === "asc" ? result : -result;
+    }
+
+    function sortedRows(view, rows, valueForKey) {
+      const state = sortState[view];
+      return rows.slice().sort((a, b) => {
+        const primary = compareValues(valueForKey(a, state.key), valueForKey(b, state.key), state.direction);
+        if (primary !== 0) return primary;
+        return compareValues(valueForKey(a, "rank") ?? valueForKey(a, "team_name") ?? valueForKey(a, "code"), valueForKey(b, "rank") ?? valueForKey(b, "team_name") ?? valueForKey(b, "code"), "asc");
+      });
+    }
+
+    function renderSummary() {
+      const teams = DATA.team_leaderboard.length;
+      const handles = DATA.team_roster.reduce((sum, team) => sum + team.handles.length, 0);
+      const contestsCount = contests.length;
+      const top = DATA.team_leaderboard[0];
+      document.getElementById("summary").innerHTML = [
+        ["Teams", teams],
+        ["Members", handles],
+        ["Scored Contests", contestsCount],
+        ["Current Leader", top ? top.team_name : "-"]
+      ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+    }
+
+    function renderTeamTable() {
+      const headers = [
+        { label: "Rank", key: "rank", width: "7%" },
+        { label: "Team", key: "team_name", text: true, width: "18%" },
+        { label: "Captain", key: "captain", text: true, width: "16%" },
+        { label: "Members", key: "members", width: "10%" },
+        { label: "Total Solved", key: "solved_total", width: "12%" }
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved"], key: "contest:" + contest.code, url: contest.url, width: "12%" })));
+      const rows = DATA.team_leaderboard.filter(row => matches(row.team_name + " " + row.captain));
+      const sorted = sortedRows("team", rows, (row, key) => key.startsWith("contest:") ? row.contests[key.slice(8)].solved : row[key]);
+      const htmlRows = sorted.map(row => {
+        const cls = row.rank === 1 ? "rank rank-one" : "rank";
+        const cells = [
+          `<td class="${cls}">${row.rank}</td>`,
+          `<td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>`,
+          `<td class="text">${escapeHtml(row.captain)}</td>`,
+          `<td>${row.members}</td>`,
+          `<td><strong>${number(row.solved_total)}</strong></td>`
+        ];
+        displayedContests.forEach(contest => {
+          const item = row.contests[contest.code] || { solved: 0, active: 0 };
+          cells.push(`<td title="Active members: ${number(item.active)}">${number(item.solved)}</td>`);
+        });
+        return `<tr>${cells.join("")}</tr>`;
+      });
+      document.getElementById("team-table").innerHTML = tableHtml("team", headers, htmlRows);
+    }
+
+    function renderIndividualTable() {
+      const headers = [
+        { label: "Rank", key: "rank", width: "7%" },
+        { label: "Name", key: "name", text: true, width: "16%" },
+        { label: "Team", key: "team_name", text: true, width: "14%" },
+        { label: "CodeChef", key: "codechef_handle", text: true, width: "18%" },
+        { label: "Total Solved", key: "total_solved", width: "12%" }
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved"], key: "contest:" + contest.code, url: contest.url, width: "12%" })));
+      const rows = DATA.individual_leaderboard.filter(row => matches(row.name + " " + row.team_name + " " + row.codechef_handle));
+      const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? row.scores[key.slice(8)].solved : row[key]);
+      const htmlRows = sorted.map(row => {
+        const cells = [
+          `<td class="rank">${row.rank}</td>`,
+          `<td class="text"><strong>${escapeHtml(row.name)}</strong></td>`,
+          `<td class="text">${escapeHtml(row.team_name)}</td>`,
+          `<td class="text">${codechefUserLink(row.codechef_handle)}</td>`,
+          `<td><strong>${number(row.total_solved)}</strong></td>`
+        ];
+        displayedContests.forEach(contest => {
+          const item = row.scores[contest.code] || { solved: 0 };
+          cells.push(`<td>${number(item.solved)}</td>`);
+        });
+        return `<tr>${cells.join("")}</tr>`;
+      });
+      document.getElementById("individual-table").innerHTML = tableHtml("individual", headers, htmlRows);
+    }
+
+    function renderRosterTable() {
+      const headers = [
+        { label: "Team", key: "team_name", text: true, width: "20%" },
+        { label: "Captain", key: "captain", text: true, width: "20%" },
+        { label: "Member Handles", key: "handles", text: true, width: "60%" }
+      ];
+      const rows = DATA.team_roster.filter(row => matches(row.team_name + " " + row.captain + " " + row.handles.join(" ")));
+      const sorted = sortedRows("roster", rows, (row, key) => key === "handles" ? row.handles.join(" ") : row[key]);
+      const htmlRows = sorted.map(row => `
+        <tr>
+          <td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>
+          <td class="text">${escapeHtml(row.captain)}</td>
+          <td class="text">${row.handles.map(codechefUserLink).join(", ")}</td>
+        </tr>
+      `);
+      document.getElementById("roster-table").innerHTML = tableHtml("roster", headers, htmlRows);
+    }
+
+    function renderLinksTable() {
+      const headers = [
+        { label: "Type", key: "label", text: true, width: "24%" },
+        { label: "Contest", key: "code", text: true, width: "18%" },
+        { label: "Link", key: "url", text: true, width: "12%" },
+        { label: "Note", key: "note", text: true, width: "46%" }
+      ];
+      const rows = DATA.contest_links.filter(row => matches(row.label + " " + row.code + " " + row.note));
+      const sorted = sortedRows("links", rows, (row, key) => row[key]);
+      const htmlRows = sorted.map(row => `
+        <tr>
+          <td class="text">${escapeHtml(row.label)}</td>
+          <td class="text"><strong>${escapeHtml(row.code)}</strong></td>
+          <td class="text"><a href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">Open</a></td>
+          <td class="text">${escapeHtml(row.note)}</td>
+        </tr>
+      `);
+      document.getElementById("links-table").innerHTML = tableHtml("links", headers, htmlRows);
+    }
+
+    function tableHtml(view, headers, rows) {
+      const state = sortState[view];
+      const colgroup = `<colgroup>${headers.map(header => `<col${header.width ? ` style="width: ${escapeHtml(header.width)}"` : ""}>`).join("")}</colgroup>`;
+      const head = `<thead><tr>${headers.map(header => {
+        const active = state.key === header.key;
+        const mark = active ? `<span class="sort-mark">${state.direction === "asc" ? "▲" : "▼"}</span>` : "";
+        const label = (header.lines || [header.label]).map(line => `<span>${escapeHtml(line)}</span>`).join("<br>");
+        const link = header.url ? `<a class="contest-link" href="${escapeHtml(header.url)}" target="_blank" rel="noopener noreferrer">Open</a>` : "";
+        return `<th class="${header.text ? "text" : ""}"><button type="button" data-sort-view="${view}" data-sort-key="${escapeHtml(header.key)}">${label}${mark}</button>${link}</th>`;
+      }).join("")}</tr></thead>`;
+      const body = rows.length ? rows.join("") : `<tr><td colspan="${headers.length}" class="text">No matching rows.</td></tr>`;
+      return colgroup + head + `<tbody>${body}</tbody>`;
+    }
+
+    function matches(text) {
+      return !query || String(text).toLowerCase().includes(query);
+    }
+
+    function render() {
+      renderSummary();
+      renderTeamTable();
+      renderIndividualTable();
+      renderRosterTable();
+      renderLinksTable();
+      document.getElementById("updated").textContent = "Last updated: " + new Date(DATA.generated_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+      document.getElementById("note").textContent = DATA.scoring_note;
+    }
+
+    document.getElementById("search").addEventListener("input", event => {
+      query = event.target.value.trim().toLowerCase();
+      render();
+    });
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("[data-sort-view]");
+      if (!button) return;
+      const view = button.dataset.sortView;
+      const key = button.dataset.sortKey;
+      const state = sortState[view];
+      if (state.key === key) {
+        state.direction = state.direction === "asc" ? "desc" : "asc";
+      } else {
+        state.key = key;
+        state.direction = key === "rank" || key === "team_name" || key === "name" || key === "code" ? "asc" : "desc";
+      }
+      render();
+    });
+
+    document.querySelectorAll("[data-view]").forEach(button => {
+      button.addEventListener("click", () => {
+        currentView = button.dataset.view;
+        query = "";
+        document.getElementById("search").value = "";
+        document.querySelectorAll("[data-view]").forEach(item => item.setAttribute("aria-selected", String(item === button)));
+        document.getElementById("team-view").classList.toggle("hidden", currentView !== "team");
+        document.getElementById("individual-view").classList.toggle("hidden", currentView !== "individual");
+        document.getElementById("roster-view").classList.toggle("hidden", currentView !== "roster");
+        document.getElementById("links-view").classList.toggle("hidden", currentView !== "links");
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>
