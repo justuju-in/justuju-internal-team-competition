@@ -217,7 +217,7 @@
         <span>Justuju</span>
       </div>
       <h1>Justuju Internal Team Competition</h1>
-      <div class="subtext">Team scores, individual CodeChef handles, and team rosters for internal contest practice.</div>
+      <div class="subtext">Team scores, individual ratings, and team rosters for internal contest practice.</div>
       <div class="updated" id="updated"></div>
     </div>
   </header>
@@ -310,9 +310,9 @@
         { name: "Chhotu", codechef_handle: "chhotu22", codechef_current_rating: 1319, codechef_highest_rating: 1423, atcoder_handle: "cksurya", atcoder_current_rating: 275, atcoder_highest_rating: 275 }
       ],
       team_roster: [
-        { team: 1, team_name: "Group 1", captain: "Prateek", handles: ["Prateek", "gummarajitha12", "poojameena21"] },
-        { team: 2, team_name: "Group 2", captain: "Amit", handles: ["Amit", "Mahima", "ranisingh"] },
-        { team: 3, team_name: "Group 3", captain: "Anup", handles: ["Anup", "Shanti", "Chhotu"] }
+        { team: 1, team_name: "Group 1", captain: "Prateek", members: ["Prateek", "Rajitha", "Pooja"] },
+        { team: 2, team_name: "Group 2", captain: "Amit", members: ["Amit", "Mahima", "Rani"] },
+        { team: 3, team_name: "Group 3", captain: "Anup", members: ["Anup", "Shanti", "Chhotu"] }
       ]
     };
 
@@ -343,20 +343,6 @@
         "\"": "&quot;",
         "'": "&#39;"
       }[ch]));
-    }
-
-    function codechefUserLink(handle) {
-      if (!handle) return "-";
-      const safeHandle = escapeHtml(handle);
-      const urlHandle = encodeURIComponent(handle);
-      if (/^(Prateek|Amit|Mahima|Anup|Shanti|Chhotu)$/i.test(handle)) return safeHandle;
-      return `<a href="https://www.codechef.com/users/${urlHandle}" target="_blank" rel="noopener noreferrer">${safeHandle}</a>`;
-    }
-
-    function atcoderUserLink(handle) {
-      if (!handle) return "-";
-      const safeHandle = escapeHtml(handle);
-      return `<a href="https://atcoder.jp/users/${encodeURIComponent(handle)}" target="_blank" rel="noopener noreferrer">${safeHandle}</a>`;
     }
 
     function compareValues(a, b, direction) {
@@ -645,19 +631,19 @@
           team: team.team,
           team_name: team.team_name,
           captain: team.captain || (members[0] ? members[0].name : ""),
-          handles: members.map(member => member.codechef_handle || member.name)
+          members: members.map(member => member.name)
         };
       });
     }
 
     function renderSummary() {
       const teams = DATA.team_leaderboard.length;
-      const handles = DATA.team_roster.reduce((sum, team) => sum + team.handles.length, 0);
+      const members = DATA.team_roster.reduce((sum, team) => sum + (team.members || team.handles || []).length, 0);
       const contestsCount = contests.length;
       const top = DATA.team_leaderboard[0];
       document.getElementById("summary").innerHTML = [
         ["Teams", teams],
-        ["Members", handles],
+        ["Members", members],
         ["Scored Contests", contestsCount],
         ["Current Leader", top ? top.team_name : "-"]
       ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
@@ -698,27 +684,23 @@
     function renderIndividualTable() {
       const headers = [
         { label: "Rank", key: "rank", width: "7%" },
-        { label: "Name", key: "name", text: true, width: "13%" },
-        { label: "Team", key: "team_name", text: true, width: "11%" },
-        { label: "CodeChef", key: "codechef_handle", text: true, width: "13%" },
-        { label: "CC Current", key: "codechef_current_rating", width: "10%" },
-        { label: "CC Highest", key: "codechef_highest_rating", width: "10%" },
-        { label: "AtCoder", key: "atcoder_handle", text: true, width: "13%" },
-        { label: "AC Current", key: "atcoder_current_rating", width: "10%" },
-        { label: "AC Highest", key: "atcoder_highest_rating", width: "10%" },
-        { label: "Total Solved", key: "total_solved", width: "10%" }
+        { label: "Name", key: "name", text: true, width: "16%" },
+        { label: "Team", key: "team_name", text: true, width: "14%" },
+        { label: "CC Current", key: "codechef_current_rating", width: "12%" },
+        { label: "CC Highest", key: "codechef_highest_rating", width: "12%" },
+        { label: "AC Current", key: "atcoder_current_rating", width: "12%" },
+        { label: "AC Highest", key: "atcoder_highest_rating", width: "12%" },
+        { label: "Total Solved", key: "total_solved", width: "12%" }
       ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved / Status"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
-      const rows = DATA.individual_leaderboard.filter(row => matches([row.name, row.team_name, row.codechef_handle, row.atcoder_handle].join(" ")));
+      const rows = DATA.individual_leaderboard.filter(row => matches([row.name, row.team_name].join(" ")));
       const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? row.scores[key.slice(8)].solved : row[key]);
       const htmlRows = sorted.map(row => {
         const cells = [
           `<td class="rank">${row.rank}</td>`,
           `<td class="text"><strong>${escapeHtml(row.name)}</strong></td>`,
           `<td class="text">${escapeHtml(row.team_name)}</td>`,
-          `<td class="text">${codechefUserLink(row.codechef_handle)}</td>`,
           `<td>${rating(row.codechef_current_rating)}</td>`,
           `<td>${rating(row.codechef_highest_rating)}</td>`,
-          `<td class="text">${atcoderUserLink(row.atcoder_handle)}</td>`,
           `<td>${rating(row.atcoder_current_rating)}</td>`,
           `<td>${rating(row.atcoder_highest_rating)}</td>`,
           `<td><strong>${number(row.total_solved)}</strong></td>`
@@ -736,15 +718,15 @@
       const headers = [
         { label: "Team", key: "team_name", text: true, width: "20%" },
         { label: "Captain", key: "captain", text: true, width: "20%" },
-        { label: "Member Handles", key: "handles", text: true, width: "60%" }
+        { label: "Members", key: "members", text: true, width: "60%" }
       ];
-      const rows = DATA.team_roster.filter(row => matches(row.team_name + " " + row.captain + " " + row.handles.join(" ")));
-      const sorted = sortedRows("roster", rows, (row, key) => key === "handles" ? row.handles.join(" ") : row[key]);
+      const rows = DATA.team_roster.filter(row => matches(row.team_name + " " + row.captain + " " + (row.members || row.handles || []).join(" ")));
+      const sorted = sortedRows("roster", rows, (row, key) => key === "members" ? (row.members || row.handles || []).join(" ") : row[key]);
       const htmlRows = sorted.map(row => `
         <tr>
           <td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>
           <td class="text">${escapeHtml(row.captain)}</td>
-          <td class="text">${row.handles.map(codechefUserLink).join(", ")}</td>
+          <td class="text">${(row.members || row.handles || []).map(escapeHtml).join(", ")}</td>
         </tr>
       `);
       document.getElementById("roster-table").innerHTML = tableHtml("roster", headers, htmlRows);
