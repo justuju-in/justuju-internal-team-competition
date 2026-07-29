@@ -331,6 +331,10 @@
       return Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
     }
 
+    function rating(value) {
+      return value === "" || value == null ? "-" : String(Number(value || 0));
+    }
+
     function escapeHtml(value) {
       return String(value ?? "").replace(/[&<>"']/g, ch => ({
         "&": "&amp;",
@@ -712,11 +716,11 @@
           `<td class="text"><strong>${escapeHtml(row.name)}</strong></td>`,
           `<td class="text">${escapeHtml(row.team_name)}</td>`,
           `<td class="text">${codechefUserLink(row.codechef_handle)}</td>`,
-          `<td>${row.codechef_current_rating ? number(row.codechef_current_rating) : "-"}</td>`,
-          `<td>${row.codechef_highest_rating ? number(row.codechef_highest_rating) : "-"}</td>`,
+          `<td>${rating(row.codechef_current_rating)}</td>`,
+          `<td>${rating(row.codechef_highest_rating)}</td>`,
           `<td class="text">${atcoderUserLink(row.atcoder_handle)}</td>`,
-          `<td>${row.atcoder_current_rating ? number(row.atcoder_current_rating) : "-"}</td>`,
-          `<td>${row.atcoder_highest_rating ? number(row.atcoder_highest_rating) : "-"}</td>`,
+          `<td>${rating(row.atcoder_current_rating)}</td>`,
+          `<td>${rating(row.atcoder_highest_rating)}</td>`,
           `<td><strong>${number(row.total_solved)}</strong></td>`
         ];
         displayedContests.forEach(contest => {
