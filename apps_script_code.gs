@@ -1,10 +1,14 @@
 const SPREADSHEET_ID = "1lJTI63vyD5-beXWLTc61jv2-S8OLm28AeIuK4hJlo8o";
 const MEMBERS_SHEET = "Members";
 const STATS_SHEET = "Profile Stats";
+const CONTEST_SCORES_SHEET = "Contest Scores";
 const DOMJUDGE_BASE_URL = "https://judge.csbasics.in";
 const DOMJUDGE_CONTEST_ID = "1";
+const CODECHEF_CONTEST_CODE = "START249";
+const CODECHEF_CONTEST_DIVISIONS = ["A", "B", "C", "D", "E"];
 
 const MEMBER_HEADERS = ["Timestamp", "Email", "Name", "Team", "CodeChef", "Codeforces", "LeetCode", "AtCoder", "DOMjudge"];
+const CONTEST_SCORE_HEADERS = ["Date", "Contest Code", "Contest Name", "Contest Link", "Name", "Team", "Problems Solved", "Attended", "Contest Rank", "Updated By", "Notes"];
 const STATS_HEADERS = [
   "Last Updated",
   "Email",
@@ -416,6 +420,211 @@ function refreshAllProfileStats() {
   return { refreshed };
 }
 
+function refreshCodeChefContestScores(contestCode) {
+  const code = clean(contestCode) || CODECHEF_CONTEST_CODE;
+  const members = getMembersForContestScores();
+  const membersByHandle = {};
+
+  members.forEach((member) => {
+    if (member.codeChef) {
+      membersByHandle[normalizeCodeChefHandle(member.codeChef)] = member;
+    }
+  });
+
+  const wantedHandles = Object.keys(membersByHandle);
+  if (!wantedHandles.length) {
+    throw new Error("No CodeChef handles found in Members sheet.");
+  }
+
+  const foundByHandle = {};
+  const divisions = CODECHEF_CONTEST_DIVISIONS.map((suffix) => code + suffix);
+
+  divisions.forEach((divisionCode) => {
+    if (Object.keys(foundByHandle).length === wantedHandles.length) return;
+    const divisionResult = fetchCodeChefRankingDivision(divisionCode, wantedHandles, foundByHandle);
+    Object.keys(divisionResult.results).forEach((handle) => {
+      foundByHandle[handle] = divisionResult.results[handle];
+    });
+  });
+
+  const rows = members.map((member) => {
+    const handleKey = normalizeCodeChefHandle(member.codeChef);
+    const result = foundByHandle[handleKey];
+    const contestName = "CodeChef Starters " + code.replace(/^START/i, "");
+    const contestLink = "https://www.codechef.com/" + code;
+    const attended = !!result;
+    const notes = result
+      ? "Auto fetched from " + result.contestCode
+      : "Not found in CodeChef ranklist";
+
+    return [
+      new Date(),
+      code,
+      contestName,
+      contestLink,
+      member.name,
+      member.team,
+      result ? result.solved : 0,
+      attended ? "Yes" : "No",
+      result ? result.rank : "",
+      "Auto",
+      notes
+    ];
+  });
+
+  upsertContestScoreRows(code, rows);
+  const summary = rows.reduce((acc, row) => {
+    acc[row[4]] = { contestCode: row[1], solved: row[6], attended: row[7], rank: row[8], notes: row[10] };
+    return acc;
+  }, {});
+  Logger.log(JSON.stringify(summary));
+  return summary;
+}
+
+function getMembersForContestScores() {
+  const sheet = getMembersSheet();
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(String);
+  return values.slice(1).map((row) => ({
+    email: valueByHeader(headers, row, "Email"),
+    name: valueByHeader(headers, row, "Name"),
+    team: valueByHeader(headers, row, "Team"),
+    codeChef: valueByHeader(headers, row, "CodeChef")
+  })).filter((member) => member.name && member.team);
+}
+
+function fetchCodeChefRankingDivision(contestCode, wantedHandles, alreadyFound) {
+  const session = openCodeChefRankingSession(contestCode);
+  if (!session.ok) {
+    return { contestCode, results: {}, error: session.error || "Could not open ranklist" };
+  }
+
+  const results = {};
+  let page = 1;
+  let availablePages = 1;
+
+  while (page <= availablePages) {
+    const url = "https://www.codechef.com/api/rankings/" + encodeURIComponent(contestCode) +
+      "?itemsPerPage=100&order=asc&page=" + page + "&sortBy=rank";
+    const response = fetchCodeChefRankingApi(url, contestCode, session);
+    if (!response.ok || !response.json) break;
+
+    availablePages = Number(response.json.availablePages) || 0;
+    const list = Array.isArray(response.json.list) ? response.json.list : [];
+    const contestName = response.json.contest_name || contestCode;
+
+    list.forEach((rankRow) => {
+      const handle = normalizeCodeChefHandle(rankRow.user_handle);
+      if (!handle || wantedHandles.indexOf(handle) === -1 || alreadyFound[handle] || results[handle]) return;
+      results[handle] = {
+        contestCode,
+        contestName,
+        rank: rankRow.rank || "",
+        solved: countSolvedCodeChefProblems(rankRow.problems_status)
+      };
+    });
+
+    if (wantedHandles.every((handle) => alreadyFound[handle] || results[handle])) break;
+    if (!list.length) break;
+    page += 1;
+  }
+
+  return { contestCode, results };
+}
+
+function openCodeChefRankingSession(contestCode) {
+  const url = "https://www.codechef.com/rankings/" + encodeURIComponent(contestCode);
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: {
+        "User-Agent": "Mozilla/5.0 Apps Script CodeChef ranklist fetcher",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      }
+    });
+    const body = response.getContentText();
+    const csrfToken = firstMatch(body, /csrfToken["']?\s*[:=]\s*["']([a-f0-9]{64})["']/i) ||
+      firstMatch(body, /["']([a-f0-9]{64})["']/i);
+    const cookie = cookieHeaderFromResponse(response);
+
+    if (!csrfToken || !cookie) {
+      return { ok: false, error: "Could not read CodeChef CSRF token or cookie." };
+    }
+
+    return { ok: true, csrfToken, cookie };
+  } catch (error) {
+    return { ok: false, error: String(error) };
+  }
+}
+
+function fetchCodeChefRankingApi(url, contestCode, session) {
+  try {
+    const response = UrlFetchApp.fetch(url, {
+      muteHttpExceptions: true,
+      followRedirects: true,
+      headers: {
+        "User-Agent": "Mozilla/5.0 Apps Script CodeChef ranklist fetcher",
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.codechef.com/rankings/" + encodeURIComponent(contestCode) + "?itemsPerPage=100&order=asc&page=1&sortBy=rank",
+        "X-Requested-With": "XMLHttpRequest",
+        "x-csrf-token": session.csrfToken,
+        "Cookie": session.cookie
+      }
+    });
+    const code = response.getResponseCode();
+    const body = response.getContentText();
+    if (code < 200 || code >= 300) {
+      return { ok: false, code, json: null, error: body };
+    }
+    const json = JSON.parse(body);
+    if (json.status === "apierror") {
+      return { ok: false, code, json, error: json.message || "CodeChef API error" };
+    }
+    return { ok: true, code, json };
+  } catch (error) {
+    return { ok: false, code: 0, json: null, error: String(error) };
+  }
+}
+
+function countSolvedCodeChefProblems(problemsStatus) {
+  if (!problemsStatus || typeof problemsStatus !== "object") return 0;
+  return Object.keys(problemsStatus).reduce((total, problemCode) => {
+    const item = problemsStatus[problemCode] || {};
+    const score = Number(item.score) || 0;
+    return total + (score > 0 ? 1 : 0);
+  }, 0);
+}
+
+function upsertContestScoreRows(baseContestCode, rows) {
+  const sheet = getContestScoresSheet();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(String);
+  const contestCodeIndex = headers.indexOf("Contest Code");
+  const nameIndex = headers.indexOf("Name");
+  const existingRows = {};
+
+  values.slice(1).forEach((row, index) => {
+    const rowContestCode = clean(row[contestCodeIndex]);
+    const rowName = clean(row[nameIndex]).toLowerCase();
+    if (rowName && (rowContestCode === baseContestCode || rowContestCode.indexOf(baseContestCode) === 0)) {
+      existingRows[rowName] = index + 2;
+    }
+  });
+
+  rows.forEach((row) => {
+    const key = clean(row[4]).toLowerCase();
+    const rowNumber = existingRows[key];
+    if (rowNumber) {
+      sheet.getRange(rowNumber, 1, 1, CONTEST_SCORE_HEADERS.length).setValues([row]);
+    } else {
+      sheet.appendRow(row);
+    }
+  });
+}
+
 function resetStatsSheet() {
   const sheet = getStatsSheet();
   sheet.clearContents();
@@ -664,6 +873,19 @@ function getStatsSheet() {
   return sheet;
 }
 
+function getContestScoresSheet() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(CONTEST_SCORES_SHEET);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(CONTEST_SCORES_SHEET);
+  }
+
+  ensureColumnCapacity(sheet, CONTEST_SCORE_HEADERS.length);
+  ensureHeaders(sheet, CONTEST_SCORE_HEADERS);
+  return sheet;
+}
+
 function ensureHeaders(sheet, headers) {
   ensureColumnCapacity(sheet, headers.length);
   sheet.getRange(1, 1, 1, sheet.getMaxColumns()).clearContent();
@@ -748,6 +970,20 @@ function normalizeNumber(value) {
 
 function normalizeHandleKey(value) {
   return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function normalizeCodeChefHandle(value) {
+  return cleanUsername(value).toLowerCase();
+}
+
+function cookieHeaderFromResponse(response) {
+  const headers = response.getAllHeaders();
+  const setCookie = headers["Set-Cookie"] || headers["set-cookie"] || [];
+  const cookies = Array.isArray(setCookie) ? setCookie : [setCookie];
+  return cookies
+    .map((cookie) => String(cookie || "").split(";")[0])
+    .filter(Boolean)
+    .join("; ");
 }
 
 function renderForm() {
