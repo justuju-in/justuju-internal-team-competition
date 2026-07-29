@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Justuju Internal Team Competition</title>
+  <style>
+    :root {
+      --bg: #f6f6f2;
+      --panel: #ffffff;
+      --ink: #1f2a2f;
+      --muted: #5b6a72;
+      --line: #d9dfd5;
+      --slate: #3b4753;
+      --slate-deep: #2b3540;
+      --green: #405b48;
+      --green-deep: #243a2e;
+      --accent: #ee965f;
+      --accent-soft: #fff1e8;
+      --gold: #b7791f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.45;
+    }
+    header {
+      background: var(--slate-deep);
+      color: #fff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .shell {
+      width: min(1180px, calc(100vw - 28px));
+      margin: 0 auto;
+    }
+    .top { padding: 24px 0 18px; }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    .brand img {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: #fff;
+    }
+    .brand span {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+    header .subtext, header .updated {
+      color: rgb(255 255 255 / 82%);
+    }
+    .subtext, .updated, .note {
+      color: var(--muted);
+      max-width: 920px;
+    }
+    main { padding: 24px 0 44px; }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      border-radius: 8px;
+      padding: 14px;
+    }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 800;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.35rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 10px 0 16px;
+    }
+    button {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 9px 12px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+    }
+    button[aria-selected="true"] {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+    }
+    .tools {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 14px;
+      margin: 12px 0;
+      flex-wrap: wrap;
+    }
+    label {
+      display: grid;
+      gap: 5px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    input {
+      width: min(360px, 82vw);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--panel);
+      color: var(--ink);
+      padding: 9px 10px;
+      font: inherit;
+      text-transform: none;
+      letter-spacing: 0;
+      font-weight: 500;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-variant-numeric: tabular-nums;
+      font-size: 0.88rem;
+    }
+    th, td {
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--line);
+      text-align: right;
+      vertical-align: top;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    th {
+      background: var(--slate-deep);
+      color: #fff;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+    }
+    th button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      padding: 0;
+      text-align: inherit;
+      min-height: 28px;
+    }
+    td.text, th.text, th.text button { text-align: left; }
+    tbody tr:hover td { background: var(--accent-soft); }
+    a { color: var(--green-deep); font-weight: 800; }
+    th a { color: var(--accent); }
+    .rank { font-weight: 900; color: var(--green); }
+    .rank-one { color: var(--gold); }
+    .sort-mark { margin-left: 4px; color: var(--accent); }
+    .contest-link {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.72rem;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .note {
+      margin: 18px 0 0;
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+      font-size: 0.96rem;
+    }
+    .hidden { display: none; }
+    @media (max-width: 760px) {
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .shell { width: min(100vw - 20px, 1180px); }
+      th, td { padding: 9px 8px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="shell top">
+      <div class="brand">
+        <img src="assets/justuju-logo.png" alt="Justuju logo">
+        <span>Justuju</span>
+      </div>
+      <h1>Justuju Internal Team Competition</h1>
+      <div class="subtext">Team scores, individual ratings, and team rosters for internal contest practice.</div>
+      <div class="updated" id="updated"></div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <section class="summary" id="summary"></section>
+
+    <div class="tabs" role="tablist" aria-label="Leaderboard views">
+      <button id="team-tab" role="tab" aria-selected="true" aria-controls="team-view" data-view="team">Team Leaderboard</button>
+      <button id="individual-tab" role="tab" aria-selected="false" aria-controls="individual-view" data-view="individual">Individuals</button>
+      <button id="roster-tab" role="tab" aria-selected="false" aria-controls="roster-view" data-view="roster">Team Roster</button>
+      <button id="links-tab" role="tab" aria-selected="false" aria-controls="links-view" data-view="links">Contest Links</button>
+    </div>
+
+    <div class="tools">
+      <label>Filter current table
+        <input id="search" type="search" placeholder="Type to filter">
+      </label>
+    </div>
+
+    <section id="team-view" role="tabpanel" aria-labelledby="team-tab">
+      <div class="table-wrap"><table id="team-table"></table></div>
+    </section>
+    <section id="individual-view" class="hidden" role="tabpanel" aria-labelledby="individual-tab">
+      <div class="table-wrap"><table id="individual-table"></table></div>
+    </section>
+    <section id="roster-view" class="hidden" role="tabpanel" aria-labelledby="roster-tab">
+      <div class="table-wrap"><table id="roster-table"></table></div>
+    </section>
+    <section id="links-view" class="hidden" role="tabpanel" aria-labelledby="links-tab">
+      <div class="table-wrap"><table id="links-table"></table></div>
+    </section>
+    <p class="note" id="note"></p>
+  </main>
+
+  <script>
+    const CONFIG = {
+      membersCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTSlU9UgE3KXxnHLWgqTmr4UdisErl9AdzwMUyNiKNLQxNF30h208v00QaV16caGI_ewE7Y4C12HC_I/pub?gid=1586992224&single=true&output=csv",
+      profileStatsCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTSlU9UgE3KXxnHLWgqTmr4UdisErl9AdzwMUyNiKNLQxNF30h208v00QaV16caGI_ewE7Y4C12HC_I/pub?gid=133055672&single=true&output=csv",
+      contestScoresCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTSlU9UgE3KXxnHLWgqTmr4UdisErl9AdzwMUyNiKNLQxNF30h208v00QaV16caGI_ewE7Y4C12HC_I/pub?gid=1704619238&single=true&output=csv",
+      contestLinksCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTSlU9UgE3KXxnHLWgqTmr4UdisErl9AdzwMUyNiKNLQxNF30h208v00QaV16caGI_ewE7Y4C12HC_I/pub?gid=239670090&single=true&output=csv"
+    };
+
+    let DATA = {
+      title: "Justuju Internal Team Competition",
+      generated_at: "2026-07-28T16:20:00+05:30",
+      scoring_note: "Team score is the average solved by attended members: total problems solved divided by attended members. Attended members with 0 solved are counted; absent members are not counted.",
+      contests: [
+        {
+          code: "START249",
+          name: "CodeChef Starters 249",
+          url: "https://www.codechef.com/START249",
+          label: "CodeChef contest",
+          note: "Tomorrow's contest. Fill solved counts after the contest."
+        }
+      ],
+      contest_links: [
+        {
+          label: "CodeChef contest",
+          code: "START249",
+          name: "CodeChef Starters 249",
+          url: "https://www.codechef.com/START249",
+          note: "Track contest problems solved and attendance. Team rank changes by average solved among attended members."
+        }
+      ],
+      teams: [
+        { team: 1, team_name: "Group 1", captain: "Prateek" },
+        { team: 2, team_name: "Group 2", captain: "Amit" },
+        { team: 3, team_name: "Group 3", captain: "Anup" }
+      ],
+      individual_leaderboard: [
+        { name: "Prateek", codechef_handle: "", team_name: "Group 1", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 1 },
+        { name: "Rajitha", codechef_handle: "gummarajitha12", team_name: "Group 1", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 2 },
+        { name: "Pooja", codechef_handle: "poojameena21", team_name: "Group 1", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 3 },
+        { name: "Amit", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 4 },
+        { name: "Mahima", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 5 },
+        { name: "Rani", codechef_handle: "ranisingh", team_name: "Group 2", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 6 },
+        { name: "Anup", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 7 },
+        { name: "Shanti", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 8 },
+        { name: "Chhotu", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 9 }
+      ],
+      profile_stats: [
+        { name: "Rajitha", codechef_handle: "gummarajitha12", codechef_current_rating: 1352, codechef_highest_rating: 1473, atcoder_handle: "rajithagumma22", atcoder_current_rating: 329, atcoder_highest_rating: 329 },
+        { name: "Rani", codechef_handle: "ranisingh", codechef_current_rating: 891, codechef_highest_rating: 1147, atcoder_handle: "Ranisingh", atcoder_current_rating: 65, atcoder_highest_rating: 73 },
+        { name: "Pooja", codechef_handle: "poojameena21", codechef_current_rating: 969, codechef_highest_rating: 1139, atcoder_handle: "poojameena22", atcoder_current_rating: 71, atcoder_highest_rating: 80 },
+        { name: "Anup", codechef_handle: "anup", codechef_current_rating: 1533, codechef_highest_rating: 1611, atcoder_handle: "anupkal", atcoder_current_rating: 499, atcoder_highest_rating: 499 },
+        { name: "Mahima", codechef_handle: "mahimadhomane2", codechef_current_rating: 1361, codechef_highest_rating: 1414, atcoder_handle: "mahimadhomane22", atcoder_current_rating: 113, atcoder_highest_rating: 183 },
+        { name: "Amit", codechef_handle: "amit3396", codechef_current_rating: 1667, codechef_highest_rating: 1738, atcoder_handle: "amit3396", atcoder_current_rating: 493, atcoder_highest_rating: 569 },
+        { name: "Shanti", codechef_handle: "shantisingh", codechef_current_rating: 983, codechef_highest_rating: 1119, atcoder_handle: "shantisingh", atcoder_current_rating: 76, atcoder_highest_rating: 80 },
+        { name: "Chhotu", codechef_handle: "chhotu22", codechef_current_rating: 1319, codechef_highest_rating: 1423, atcoder_handle: "cksurya", atcoder_current_rating: 275, atcoder_highest_rating: 275 }
+      ],
+      team_roster: [
+        { team: 1, team_name: "Group 1", captain: "Prateek", members: ["Prateek", "Rajitha", "Pooja"] },
+        { team: 2, team_name: "Group 2", captain: "Amit", members: ["Amit", "Mahima", "Rani"] },
+        { team: 3, team_name: "Group 3", captain: "Anup", members: ["Anup", "Shanti", "Chhotu"] }
+      ]
+    };
+
+    let contests = [];
+    let displayedContests = [];
+    let currentView = "team";
+    let query = "";
+    const sortState = {
+      team: { key: "rank", direction: "asc" },
+      individual: { key: "rank", direction: "asc" },
+      roster: { key: "team_name", direction: "asc" },
+      links: { key: "code", direction: "asc" }
+    };
+
+    function number(value) {
+      return Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 });
+    }
+
+    function rating(value) {
+      return value === "" || value == null ? "-" : String(Number(value || 0));
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, ch => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+      }[ch]));
+    }
+
+    function compareValues(a, b, direction) {
+      const av = a ?? "";
+      const bv = b ?? "";
+      let result;
+      if (typeof av === "number" && typeof bv === "number") {
+        result = av - bv;
+      } else {
+        result = String(av).localeCompare(String(bv), "en", { numeric: true, sensitivity: "base" });
+      }
+      return direction === "asc" ? result : -result;
+    }
+
+    function sortedRows(view, rows, valueForKey) {
+      const state = sortState[view];
+      return rows.slice().sort((a, b) => {
+        const primary = compareValues(valueForKey(a, state.key), valueForKey(b, state.key), state.direction);
+        if (primary !== 0) return primary;
+        return compareValues(valueForKey(a, "rank") ?? valueForKey(a, "team_name") ?? valueForKey(a, "code"), valueForKey(b, "rank") ?? valueForKey(b, "team_name") ?? valueForKey(b, "code"), "asc");
+      });
+    }
+
+    function isAttended(score) {
+      return score && (score.attended === true || String(score.attended).toLowerCase() === "yes");
+    }
+
+    function buildTeamLeaderboard() {
+      const teams = DATA.teams.map(team => {
+        const members = DATA.individual_leaderboard.filter(member => member.team_name === team.team_name);
+        const contestsSummary = {};
+        let solvedTotal = 0;
+        let attendedTotal = 0;
+
+        contests.forEach(code => {
+          const contestSummary = members.reduce((summary, member) => {
+            const score = member.scores[code] || {};
+            if (isAttended(score)) {
+              summary.attended += 1;
+              summary.solved += Number(score.solved || 0);
+            }
+            return summary;
+          }, { solved: 0, attended: 0 });
+
+          contestsSummary[code] = {
+            solved: contestSummary.solved,
+            attended: contestSummary.attended,
+            average: contestSummary.attended ? contestSummary.solved / contestSummary.attended : 0
+          };
+          solvedTotal += contestSummary.solved;
+          attendedTotal += contestSummary.attended;
+        });
+
+        return {
+          ...team,
+          members: members.length,
+          contests: contestsSummary,
+          solved_total: solvedTotal,
+          attended_total: attendedTotal,
+          average_score: attendedTotal ? solvedTotal / attendedTotal : 0
+        };
+      }).sort((a, b) => b.average_score - a.average_score || b.solved_total - a.solved_total || b.attended_total - a.attended_total || a.team_name.localeCompare(b.team_name));
+
+      let lastKey = "";
+      let lastRank = 0;
+      return teams.map((team, index) => {
+        const key = [team.average_score, team.solved_total, team.attended_total].join("|");
+        const rank = key === lastKey ? lastRank : index + 1;
+        lastKey = key;
+        lastRank = rank;
+        return { ...team, rank };
+      });
+    }
+
+    function enrichIndividualsFromProfiles() {
+      const profiles = new Map((DATA.profile_stats || []).map(profile => [String(profile.name || "").toLowerCase(), profile]));
+      DATA.individual_leaderboard.forEach(row => {
+        const profile = profiles.get(String(row.name || "").toLowerCase());
+        if (!profile) return;
+        row.codechef_handle = profile.codechef_handle || row.codechef_handle;
+        row.codechef_current_rating = profile.codechef_current_rating || "";
+        row.codechef_highest_rating = profile.codechef_highest_rating || "";
+        row.atcoder_handle = profile.atcoder_handle || "";
+        row.atcoder_current_rating = profile.atcoder_current_rating || "";
+        row.atcoder_highest_rating = profile.atcoder_highest_rating || "";
+      });
+    }
+
+    function prepareData() {
+      contests = DATA.contests.map(contest => contest.code);
+      displayedContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+      enrichIndividualsFromProfiles();
+      DATA.team_leaderboard = buildTeamLeaderboard();
+    }
+
+    async function init() {
+      const liveData = await loadLiveData();
+      if (liveData) DATA = liveData;
+      prepareData();
+      render();
+    }
+
+    async function loadLiveData() {
+      const urls = Object.values(CONFIG).filter(Boolean);
+      if (!urls.length) return null;
+
+      const [members, profiles, scores, links] = await Promise.all([
+        loadCsv(CONFIG.membersCsvUrl),
+        loadCsv(CONFIG.profileStatsCsvUrl),
+        loadCsv(CONFIG.contestScoresCsvUrl),
+        loadCsv(CONFIG.contestLinksCsvUrl)
+      ]);
+
+      if (!members.length && !profiles.length && !scores.length && !links.length) return null;
+      return buildDataFromRows(members, profiles, scores, links);
+    }
+
+    async function loadCsv(url) {
+      if (!url) return [];
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Could not load " + url);
+      return parseCsv(await response.text());
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let value = "";
+      let quoted = false;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const next = text[index + 1];
+        if (char === '"' && quoted && next === '"') {
+          value += '"';
+          index += 1;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          row.push(value);
+          value = "";
+        } else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") index += 1;
+          row.push(value);
+          rows.push(row);
+          row = [];
+          value = "";
+        } else {
+          value += char;
+        }
+      }
+
+      if (value || row.length) {
+        row.push(value);
+        rows.push(row);
+      }
+
+      const headers = (rows.shift() || []).map(item => item.trim());
+      return rows
+        .filter(item => item.some(Boolean))
+        .map(item => Object.fromEntries(headers.map((header, index) => [header, (item[index] || "").trim()])));
+    }
+
+    function field(row, names) {
+      const keys = Object.keys(row || {});
+      const wanted = names.map(name => String(name).toLowerCase());
+      const key = keys.find(item => wanted.includes(item.toLowerCase()));
+      return key ? row[key] : "";
+    }
+
+    function numeric(value) {
+      return Number(String(value || "").replace(/[^\d.-]/g, "")) || 0;
+    }
+
+    function attendedValue(value) {
+      return /^(yes|y|true|1|attended)$/i.test(String(value || "").trim());
+    }
+
+    function buildDataFromRows(memberRows, profileRows, scoreRows, linkRows) {
+      const profileStats = profileRows.map(row => ({
+        name: field(row, ["Name"]),
+        codechef_handle: field(row, ["CodeChef Handle"]),
+        codechef_current_rating: numeric(field(row, ["CodeChef Current Rating"])),
+        codechef_highest_rating: numeric(field(row, ["CodeChef Highest Rating"])),
+        atcoder_handle: field(row, ["AtCoder Handle"]),
+        atcoder_current_rating: numeric(field(row, ["AtCoder Current Rating"])),
+        atcoder_highest_rating: numeric(field(row, ["AtCoder Highest Rating"]))
+      })).filter(row => row.name);
+
+      const profileByName = new Map(profileStats.map(row => [row.name.toLowerCase(), row]));
+      const fallbackByName = new Map(DATA.individual_leaderboard.map(row => [row.name.toLowerCase(), row]));
+      const members = memberRows.length ? memberRows : profileStats.map(profile => ({
+        Name: profile.name,
+        Team: (fallbackByName.get(profile.name.toLowerCase()) || {}).team_name || "",
+        CodeChef: profile.codechef_handle,
+        AtCoder: profile.atcoder_handle
+      }));
+
+      const contestLinks = linkRows.length ? linkRows.map(row => ({
+        label: field(row, ["Platform", "Label"]) || "CodeChef contest",
+        code: field(row, ["Contest Code", "Code"]),
+        name: field(row, ["Title", "Contest Name", "Name"]),
+        url: field(row, ["Link", "URL"]),
+        note: field(row, ["Notes", "Note"])
+      })).filter(row => row.code) : DATA.contest_links;
+
+      const contestByCode = new Map(DATA.contests.map(row => [row.code, { ...row }]));
+      contestLinks.forEach(row => {
+        contestByCode.set(row.code, {
+          code: row.code,
+          name: row.name || row.code,
+          url: row.url || "",
+          label: row.label || "CodeChef contest",
+          note: row.note || ""
+        });
+      });
+      scoreRows.forEach(row => {
+        const code = field(row, ["Contest Code", "Code"]);
+        if (!code || contestByCode.has(code)) return;
+        contestByCode.set(code, {
+          code,
+          name: field(row, ["Contest Name", "Title"]) || code,
+          url: field(row, ["Contest Link", "Link", "URL"]),
+          label: "CodeChef contest",
+          note: ""
+        });
+      });
+
+      const scoreByMember = new Map();
+      scoreRows.forEach(row => {
+        const name = field(row, ["Name"]);
+        const code = field(row, ["Contest Code", "Code"]);
+        if (!name || !code) return;
+        const key = name.toLowerCase();
+        if (!scoreByMember.has(key)) scoreByMember.set(key, {});
+        scoreByMember.get(key)[code] = {
+          solved: numeric(field(row, ["Problems Solved", "Solved"])),
+          attended: attendedValue(field(row, ["Attended"])),
+          rank: field(row, ["Contest Rank", "Rank"])
+        };
+      });
+
+      const individualRows = members.map((member, index) => {
+        const name = field(member, ["Name"]);
+        const profile = profileByName.get(name.toLowerCase()) || {};
+        const fallback = fallbackByName.get(name.toLowerCase()) || {};
+        const memberScores = scoreByMember.get(name.toLowerCase()) || {};
+        const scores = {};
+        Array.from(contestByCode.keys()).forEach(code => {
+          scores[code] = memberScores[code] || { solved: 0, attended: false, rank: "" };
+        });
+        const totalSolved = Object.values(scores).reduce((sum, item) => sum + (isAttended(item) ? numeric(item.solved) : 0), 0);
+
+        return {
+          name,
+          team_name: field(member, ["Team"]) || profile.team_name || fallback.team_name || "Unassigned",
+          codechef_handle: field(member, ["CodeChef"]) || profile.codechef_handle || fallback.codechef_handle || "",
+          atcoder_handle: field(member, ["AtCoder"]) || profile.atcoder_handle || fallback.atcoder_handle || "",
+          scores,
+          total_solved: totalSolved,
+          rank: index + 1
+        };
+      }).filter(row => row.name);
+
+      const teamsByName = new Map(DATA.teams.map(team => [team.team_name, { ...team }]));
+      individualRows.forEach(member => {
+        if (!teamsByName.has(member.team_name)) teamsByName.set(member.team_name, { team: teamsByName.size + 1, team_name: member.team_name, captain: "" });
+      });
+
+      return {
+        ...DATA,
+        generated_at: new Date().toISOString(),
+        contests: Array.from(contestByCode.values()),
+        contest_links: contestLinks,
+        teams: Array.from(teamsByName.values()),
+        individual_leaderboard: individualRows,
+        profile_stats: profileStats,
+        team_roster: buildRoster(Array.from(teamsByName.values()), individualRows)
+      };
+    }
+
+    function buildRoster(teams, individuals) {
+      return teams.map(team => {
+        const members = individuals.filter(member => member.team_name === team.team_name);
+        return {
+          team: team.team,
+          team_name: team.team_name,
+          captain: team.captain || (members[0] ? members[0].name : ""),
+          members: members.map(member => member.name)
+        };
+      });
+    }
+
+    function renderSummary() {
+      const teams = DATA.team_leaderboard.length;
+      const members = DATA.team_roster.reduce((sum, team) => sum + (team.members || team.handles || []).length, 0);
+      const contestsCount = contests.length;
+      const top = DATA.team_leaderboard[0];
+      document.getElementById("summary").innerHTML = [
+        ["Teams", teams],
+        ["Members", members],
+        ["Scored Contests", contestsCount],
+        ["Current Leader", top ? top.team_name : "-"]
+      ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+    }
+
+    function renderTeamTable() {
+      const headers = [
+        { label: "Rank", key: "rank", width: "7%" },
+        { label: "Team", key: "team_name", text: true, width: "18%" },
+        { label: "Captain", key: "captain", text: true, width: "16%" },
+        { label: "Members", key: "members", width: "10%" },
+        { label: "Team Score", key: "average_score", width: "12%" },
+        { label: "Attended", key: "attended_total", width: "10%" },
+        { label: "Total Solved", key: "solved_total", width: "12%" }
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Avg / Attended"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
+      const rows = DATA.team_leaderboard.filter(row => matches(row.team_name + " " + row.captain));
+      const sorted = sortedRows("team", rows, (row, key) => key.startsWith("contest:") ? row.contests[key.slice(8)].average : row[key]);
+      const htmlRows = sorted.map(row => {
+        const cls = row.rank === 1 ? "rank rank-one" : "rank";
+        const cells = [
+          `<td class="${cls}">${row.rank}</td>`,
+          `<td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>`,
+          `<td class="text">${escapeHtml(row.captain)}</td>`,
+          `<td>${row.members}</td>`,
+          `<td><strong>${number(row.average_score)}</strong></td>`,
+          `<td>${number(row.attended_total)}</td>`,
+          `<td><strong>${number(row.solved_total)}</strong></td>`
+        ];
+        displayedContests.forEach(contest => {
+          const item = row.contests[contest.code] || { solved: 0, attended: 0, average: 0 };
+          cells.push(`<td title="Solved: ${number(item.solved)}">${number(item.average)} / ${number(item.attended)}</td>`);
+        });
+        return `<tr>${cells.join("")}</tr>`;
+      });
+      document.getElementById("team-table").innerHTML = tableHtml("team", headers, htmlRows);
+    }
+
+    function renderIndividualTable() {
+      const headers = [
+        { label: "Rank", key: "rank", width: "7%" },
+        { label: "Name", key: "name", text: true, width: "16%" },
+        { label: "Team", key: "team_name", text: true, width: "14%" },
+        { label: "CC Current", key: "codechef_current_rating", width: "12%" },
+        { label: "CC Highest", key: "codechef_highest_rating", width: "12%" },
+        { label: "AC Current", key: "atcoder_current_rating", width: "12%" },
+        { label: "AC Highest", key: "atcoder_highest_rating", width: "12%" },
+        { label: "Total Solved", key: "total_solved", width: "12%" }
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved / Status"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
+      const rows = DATA.individual_leaderboard.filter(row => matches([row.name, row.team_name].join(" ")));
+      const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? row.scores[key.slice(8)].solved : row[key]);
+      const htmlRows = sorted.map(row => {
+        const cells = [
+          `<td class="rank">${row.rank}</td>`,
+          `<td class="text"><strong>${escapeHtml(row.name)}</strong></td>`,
+          `<td class="text">${escapeHtml(row.team_name)}</td>`,
+          `<td>${rating(row.codechef_current_rating)}</td>`,
+          `<td>${rating(row.codechef_highest_rating)}</td>`,
+          `<td>${rating(row.atcoder_current_rating)}</td>`,
+          `<td>${rating(row.atcoder_highest_rating)}</td>`,
+          `<td><strong>${number(row.total_solved)}</strong></td>`
+        ];
+        displayedContests.forEach(contest => {
+          const item = row.scores[contest.code] || { solved: 0, attended: false };
+          cells.push(`<td>${number(item.solved)} / ${isAttended(item) ? "Attended" : "Absent"}</td>`);
+        });
+        return `<tr>${cells.join("")}</tr>`;
+      });
+      document.getElementById("individual-table").innerHTML = tableHtml("individual", headers, htmlRows);
+    }
+
+    function renderRosterTable() {
+      const headers = [
+        { label: "Team", key: "team_name", text: true, width: "20%" },
+        { label: "Captain", key: "captain", text: true, width: "20%" },
+        { label: "Members", key: "members", text: true, width: "60%" }
+      ];
+      const rows = DATA.team_roster.filter(row => matches(row.team_name + " " + row.captain + " " + (row.members || row.handles || []).join(" ")));
+      const sorted = sortedRows("roster", rows, (row, key) => key === "members" ? (row.members || row.handles || []).join(" ") : row[key]);
+      const htmlRows = sorted.map(row => `
+        <tr>
+          <td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>
+          <td class="text">${escapeHtml(row.captain)}</td>
+          <td class="text">${(row.members || row.handles || []).map(escapeHtml).join(", ")}</td>
+        </tr>
+      `);
+      document.getElementById("roster-table").innerHTML = tableHtml("roster", headers, htmlRows);
+    }
+
+    function renderLinksTable() {
+      const headers = [
+        { label: "Type", key: "label", text: true, width: "24%" },
+        { label: "Contest", key: "code", text: true, width: "18%" },
+        { label: "Link", key: "url", text: true, width: "12%" },
+        { label: "Note", key: "note", text: true, width: "46%" }
+      ];
+      const rows = DATA.contest_links.filter(row => matches(row.label + " " + row.code + " " + row.note));
+      const sorted = sortedRows("links", rows, (row, key) => row[key]);
+      const htmlRows = sorted.map(row => `
+        <tr>
+          <td class="text">${escapeHtml(row.label)}</td>
+          <td class="text"><strong>${escapeHtml(row.code)}</strong></td>
+          <td class="text"><a href="${escapeHtml(row.url)}" target="_blank" rel="noopener noreferrer">Open</a></td>
+          <td class="text">${escapeHtml(row.note)}</td>
+        </tr>
+      `);
+      document.getElementById("links-table").innerHTML = tableHtml("links", headers, htmlRows);
+    }
+
+    function tableHtml(view, headers, rows) {
+      const state = sortState[view];
+      const colgroup = `<colgroup>${headers.map(header => `<col${header.width ? ` style="width: ${escapeHtml(header.width)}"` : ""}>`).join("")}</colgroup>`;
+      const head = `<thead><tr>${headers.map(header => {
+        const active = state.key === header.key;
+        const mark = active ? `<span class="sort-mark">${state.direction === "asc" ? "▲" : "▼"}</span>` : "";
+        const label = (header.lines || [header.label]).map(line => `<span>${escapeHtml(line)}</span>`).join("<br>");
+        const link = header.url ? `<a class="contest-link" href="${escapeHtml(header.url)}" target="_blank" rel="noopener noreferrer">Open</a>` : "";
+        return `<th class="${header.text ? "text" : ""}"><button type="button" data-sort-view="${view}" data-sort-key="${escapeHtml(header.key)}">${label}${mark}</button>${link}</th>`;
+      }).join("")}</tr></thead>`;
+      const body = rows.length ? rows.join("") : `<tr><td colspan="${headers.length}" class="text">No matching rows.</td></tr>`;
+      return colgroup + head + `<tbody>${body}</tbody>`;
+    }
+
+    function matches(text) {
+      return !query || String(text).toLowerCase().includes(query);
+    }
+
+    function render() {
+      renderSummary();
+      renderTeamTable();
+      renderIndividualTable();
+      renderRosterTable();
+      renderLinksTable();
+      document.getElementById("updated").textContent = "Last updated: " + new Date(DATA.generated_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+      document.getElementById("note").textContent = DATA.scoring_note;
+    }
+
+    document.getElementById("search").addEventListener("input", event => {
+      query = event.target.value.trim().toLowerCase();
+      render();
+    });
+
+    document.addEventListener("click", event => {
+      const button = event.target.closest("[data-sort-view]");
+      if (!button) return;
+      const view = button.dataset.sortView;
+      const key = button.dataset.sortKey;
+      const state = sortState[view];
+      if (state.key === key) {
+        state.direction = state.direction === "asc" ? "desc" : "asc";
+      } else {
+        state.key = key;
+        state.direction = key === "rank" || key === "team_name" || key === "name" || key === "code" ? "asc" : "desc";
+      }
+      render();
+    });
+
+    document.querySelectorAll("[data-view]").forEach(button => {
+      button.addEventListener("click", () => {
+        currentView = button.dataset.view;
+        query = "";
+        document.getElementById("search").value = "";
+        document.querySelectorAll("[data-view]").forEach(item => item.setAttribute("aria-selected", String(item === button)));
+        document.getElementById("team-view").classList.toggle("hidden", currentView !== "team");
+        document.getElementById("individual-view").classList.toggle("hidden", currentView !== "individual");
+        document.getElementById("roster-view").classList.toggle("hidden", currentView !== "roster");
+        document.getElementById("links-view").classList.toggle("hidden", currentView !== "links");
+      });
+    });
+
+    init().catch(error => {
+      prepareData();
+      render();
+      document.getElementById("note").textContent = "Could not load live sheet data. Showing embedded fallback data. " + error.message;
+    });
+  </script>
+</body>
+</html>
