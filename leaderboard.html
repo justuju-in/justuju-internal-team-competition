@@ -257,7 +257,7 @@
     const DATA = {
       title: "Justuju Internal Team Competition",
       generated_at: "2026-07-28T16:20:00+05:30",
-      scoring_note: "Team score is the sum of contest problems solved by all team members. Update the embedded DATA object after each contest, or regenerate this file from the Contest Scores sheet.",
+      scoring_note: "Team score is the average solved by attended members: total problems solved divided by attended members. Attended members with 0 solved are counted; absent members are not counted.",
       contests: [
         {
           code: "START249",
@@ -273,51 +273,24 @@
           code: "START249",
           name: "CodeChef Starters 249",
           url: "https://www.codechef.com/START249",
-          note: "Track only contest problems solved. Team rank changes by total solved."
+          note: "Track contest problems solved and attendance. Team rank changes by average solved among attended members."
         }
       ],
-      team_leaderboard: [
-        {
-          team: 1,
-          team_name: "Group 1",
-          captain: "Prateek",
-          members: 3,
-          contests: { START249: { solved: 0, active: 0 } },
-          solved_total: 0,
-          active_total: 0,
-          rank: 1
-        },
-        {
-          team: 2,
-          team_name: "Group 2",
-          captain: "Amit",
-          members: 3,
-          contests: { START249: { solved: 0, active: 0 } },
-          solved_total: 0,
-          active_total: 0,
-          rank: 2
-        },
-        {
-          team: 3,
-          team_name: "Group 3",
-          captain: "Anup",
-          members: 3,
-          contests: { START249: { solved: 0, active: 0 } },
-          solved_total: 0,
-          active_total: 0,
-          rank: 3
-        }
+      teams: [
+        { team: 1, team_name: "Group 1", captain: "Prateek" },
+        { team: 2, team_name: "Group 2", captain: "Amit" },
+        { team: 3, team_name: "Group 3", captain: "Anup" }
       ],
       individual_leaderboard: [
-        { name: "Prateek", codechef_handle: "", team_name: "Group 1", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 1 },
-        { name: "Rajitha", codechef_handle: "gummarajitha12", team_name: "Group 1", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 2 },
-        { name: "Pooja", codechef_handle: "poojameena21", team_name: "Group 1", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 3 },
-        { name: "Amit", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 4 },
-        { name: "Mahima", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 5 },
-        { name: "Rani", codechef_handle: "ranisingh", team_name: "Group 2", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 6 },
-        { name: "Anup", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 7 },
-        { name: "Shanti", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 8 },
-        { name: "Chhotu", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, rank: "" } }, total_solved: 0, rank: 9 }
+        { name: "Prateek", codechef_handle: "", team_name: "Group 1", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 1 },
+        { name: "Rajitha", codechef_handle: "gummarajitha12", team_name: "Group 1", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 2 },
+        { name: "Pooja", codechef_handle: "poojameena21", team_name: "Group 1", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 3 },
+        { name: "Amit", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 4 },
+        { name: "Mahima", codechef_handle: "", team_name: "Group 2", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 5 },
+        { name: "Rani", codechef_handle: "ranisingh", team_name: "Group 2", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 6 },
+        { name: "Anup", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 7 },
+        { name: "Shanti", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 8 },
+        { name: "Chhotu", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 9 }
       ],
       team_roster: [
         { team: 1, team_name: "Group 1", captain: "Prateek", handles: ["Prateek", "gummarajitha12", "poojameena21"] },
@@ -328,6 +301,7 @@
 
     const contests = DATA.contests.map(contest => contest.code);
     const displayedContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+    DATA.team_leaderboard = buildTeamLeaderboard();
     let currentView = "team";
     let query = "";
     const sortState = {
@@ -380,6 +354,57 @@
       });
     }
 
+    function isAttended(score) {
+      return score && (score.attended === true || String(score.attended).toLowerCase() === "yes");
+    }
+
+    function buildTeamLeaderboard() {
+      const teams = DATA.teams.map(team => {
+        const members = DATA.individual_leaderboard.filter(member => member.team_name === team.team_name);
+        const contestsSummary = {};
+        let solvedTotal = 0;
+        let attendedTotal = 0;
+
+        contests.forEach(code => {
+          const contestSummary = members.reduce((summary, member) => {
+            const score = member.scores[code] || {};
+            if (isAttended(score)) {
+              summary.attended += 1;
+              summary.solved += Number(score.solved || 0);
+            }
+            return summary;
+          }, { solved: 0, attended: 0 });
+
+          contestsSummary[code] = {
+            solved: contestSummary.solved,
+            attended: contestSummary.attended,
+            average: contestSummary.attended ? contestSummary.solved / contestSummary.attended : 0
+          };
+          solvedTotal += contestSummary.solved;
+          attendedTotal += contestSummary.attended;
+        });
+
+        return {
+          ...team,
+          members: members.length,
+          contests: contestsSummary,
+          solved_total: solvedTotal,
+          attended_total: attendedTotal,
+          average_score: attendedTotal ? solvedTotal / attendedTotal : 0
+        };
+      }).sort((a, b) => b.average_score - a.average_score || b.solved_total - a.solved_total || b.attended_total - a.attended_total || a.team_name.localeCompare(b.team_name));
+
+      let lastKey = "";
+      let lastRank = 0;
+      return teams.map((team, index) => {
+        const key = [team.average_score, team.solved_total, team.attended_total].join("|");
+        const rank = key === lastKey ? lastRank : index + 1;
+        lastKey = key;
+        lastRank = rank;
+        return { ...team, rank };
+      });
+    }
+
     function renderSummary() {
       const teams = DATA.team_leaderboard.length;
       const handles = DATA.team_roster.reduce((sum, team) => sum + team.handles.length, 0);
@@ -399,10 +424,12 @@
         { label: "Team", key: "team_name", text: true, width: "18%" },
         { label: "Captain", key: "captain", text: true, width: "16%" },
         { label: "Members", key: "members", width: "10%" },
+        { label: "Team Score", key: "average_score", width: "12%" },
+        { label: "Attended", key: "attended_total", width: "10%" },
         { label: "Total Solved", key: "solved_total", width: "12%" }
-      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved"], key: "contest:" + contest.code, url: contest.url, width: "12%" })));
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Avg / Attended"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
       const rows = DATA.team_leaderboard.filter(row => matches(row.team_name + " " + row.captain));
-      const sorted = sortedRows("team", rows, (row, key) => key.startsWith("contest:") ? row.contests[key.slice(8)].solved : row[key]);
+      const sorted = sortedRows("team", rows, (row, key) => key.startsWith("contest:") ? row.contests[key.slice(8)].average : row[key]);
       const htmlRows = sorted.map(row => {
         const cls = row.rank === 1 ? "rank rank-one" : "rank";
         const cells = [
@@ -410,11 +437,13 @@
           `<td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>`,
           `<td class="text">${escapeHtml(row.captain)}</td>`,
           `<td>${row.members}</td>`,
+          `<td><strong>${number(row.average_score)}</strong></td>`,
+          `<td>${number(row.attended_total)}</td>`,
           `<td><strong>${number(row.solved_total)}</strong></td>`
         ];
         displayedContests.forEach(contest => {
-          const item = row.contests[contest.code] || { solved: 0, active: 0 };
-          cells.push(`<td title="Active members: ${number(item.active)}">${number(item.solved)}</td>`);
+          const item = row.contests[contest.code] || { solved: 0, attended: 0, average: 0 };
+          cells.push(`<td title="Solved: ${number(item.solved)}">${number(item.average)} / ${number(item.attended)}</td>`);
         });
         return `<tr>${cells.join("")}</tr>`;
       });
@@ -428,7 +457,7 @@
         { label: "Team", key: "team_name", text: true, width: "14%" },
         { label: "CodeChef", key: "codechef_handle", text: true, width: "18%" },
         { label: "Total Solved", key: "total_solved", width: "12%" }
-      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved"], key: "contest:" + contest.code, url: contest.url, width: "12%" })));
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved / Status"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
       const rows = DATA.individual_leaderboard.filter(row => matches(row.name + " " + row.team_name + " " + row.codechef_handle));
       const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? row.scores[key.slice(8)].solved : row[key]);
       const htmlRows = sorted.map(row => {
@@ -440,8 +469,8 @@
           `<td><strong>${number(row.total_solved)}</strong></td>`
         ];
         displayedContests.forEach(contest => {
-          const item = row.scores[contest.code] || { solved: 0 };
-          cells.push(`<td>${number(item.solved)}</td>`);
+          const item = row.scores[contest.code] || { solved: 0, attended: false };
+          cells.push(`<td>${number(item.solved)} / ${isAttended(item) ? "Attended" : "Absent"}</td>`);
         });
         return `<tr>${cells.join("")}</tr>`;
       });

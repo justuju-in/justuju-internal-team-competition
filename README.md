@@ -38,7 +38,7 @@ Initial rows can be:
 Headers:
 
 ```text
-Date,Contest Code,Contest Name,Contest Link,Name,Team,Problems Solved,Contest Rank,Updated By,Notes
+Date,Contest Code,Contest Name,Contest Link,Name,Team,Problems Solved,Attended,Contest Rank,Updated By,Notes
 ```
 
 ### Profile Stats
@@ -128,8 +128,11 @@ For CodeChef contests, keep scoring simple:
 
 ```text
 Individual score = Problems Solved
-Team score = Sum of Problems Solved by all team members
+Team score = Total Problems Solved / Attended Members
 Team rank = Highest Team score first
 ```
 
-After every contest, update only the `Problems Solved` and optional `Contest Rank` cells in `Contest Scores`.
+After every contest, update `Problems Solved`, `Attended`, and optional `Contest Rank` cells in `Contest Scores`.
+
+- If a member attended and solved 0 problems, set `Attended` to `Yes` and `Problems Solved` to `0`.
+- If a member did not attend, set `Attended` to `No`; that member is not counted in the team average.
