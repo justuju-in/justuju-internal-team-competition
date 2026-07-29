@@ -101,16 +101,20 @@ File > Share > Publish to web > choose tab > CSV
 Copy the CSV links for:
 
 - Members
+- Profile Stats
 - Contest Scores
 - Contest Links
 
-The current `leaderboard.html` follows the reference repo style and embeds data directly in the `DATA` object. For live CSV mode, replace the embedded data loader with these URLs:
+The current `leaderboard.html` follows the reference repo style and includes embedded fallback data. For live CSV mode, paste the published CSV URLs into the `CONFIG` object near the top of the script:
 
 ```js
 membersCsvUrl: "PASTE_MEMBERS_CSV_URL_HERE",
+profileStatsCsvUrl: "PASTE_PROFILE_STATS_CSV_URL_HERE",
 contestScoresCsvUrl: "PASTE_CONTEST_SCORES_CSV_URL_HERE",
 contestLinksCsvUrl: "PASTE_CONTEST_LINKS_CSV_URL_HERE",
 ```
+
+The Individuals table uses `Profile Stats` for CodeChef and AtCoder current/highest ratings.
 
 ## 4. Host The Leaderboard
 

@@ -254,7 +254,14 @@
   </main>
 
   <script>
-    const DATA = {
+    const CONFIG = {
+      membersCsvUrl: "",
+      profileStatsCsvUrl: "",
+      contestScoresCsvUrl: "",
+      contestLinksCsvUrl: ""
+    };
+
+    let DATA = {
       title: "Justuju Internal Team Competition",
       generated_at: "2026-07-28T16:20:00+05:30",
       scoring_note: "Team score is the average solved by attended members: total problems solved divided by attended members. Attended members with 0 solved are counted; absent members are not counted.",
@@ -292,6 +299,16 @@
         { name: "Shanti", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 8 },
         { name: "Chhotu", codechef_handle: "", team_name: "Group 3", scores: { START249: { solved: 0, attended: false, rank: "" } }, total_solved: 0, rank: 9 }
       ],
+      profile_stats: [
+        { name: "Rajitha", codechef_handle: "gummarajitha12", codechef_current_rating: 1352, codechef_highest_rating: 1473, atcoder_handle: "rajithagumma22", atcoder_current_rating: 329, atcoder_highest_rating: 329 },
+        { name: "Rani", codechef_handle: "ranisingh", codechef_current_rating: 891, codechef_highest_rating: 1147, atcoder_handle: "Ranisingh", atcoder_current_rating: 65, atcoder_highest_rating: 73 },
+        { name: "Pooja", codechef_handle: "poojameena21", codechef_current_rating: 969, codechef_highest_rating: 1139, atcoder_handle: "poojameena22", atcoder_current_rating: 71, atcoder_highest_rating: 80 },
+        { name: "Anup", codechef_handle: "anup", codechef_current_rating: 1533, codechef_highest_rating: 1611, atcoder_handle: "anupkal", atcoder_current_rating: 499, atcoder_highest_rating: 499 },
+        { name: "Mahima", codechef_handle: "mahimadhomane2", codechef_current_rating: 1361, codechef_highest_rating: 1414, atcoder_handle: "mahimadhomane22", atcoder_current_rating: 113, atcoder_highest_rating: 183 },
+        { name: "Amit", codechef_handle: "amit3396", codechef_current_rating: 1667, codechef_highest_rating: 1738, atcoder_handle: "amit3396", atcoder_current_rating: 493, atcoder_highest_rating: 569 },
+        { name: "Shanti", codechef_handle: "shantisingh", codechef_current_rating: 983, codechef_highest_rating: 1119, atcoder_handle: "shantisingh", atcoder_current_rating: 76, atcoder_highest_rating: 80 },
+        { name: "Chhotu", codechef_handle: "chhotu22", codechef_current_rating: 1319, codechef_highest_rating: 1423, atcoder_handle: "cksurya", atcoder_current_rating: 275, atcoder_highest_rating: 275 }
+      ],
       team_roster: [
         { team: 1, team_name: "Group 1", captain: "Prateek", handles: ["Prateek", "gummarajitha12", "poojameena21"] },
         { team: 2, team_name: "Group 2", captain: "Amit", handles: ["Amit", "Mahima", "ranisingh"] },
@@ -299,9 +316,8 @@
       ]
     };
 
-    const contests = DATA.contests.map(contest => contest.code);
-    const displayedContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
-    DATA.team_leaderboard = buildTeamLeaderboard();
+    let contests = [];
+    let displayedContests = [];
     let currentView = "team";
     let query = "";
     const sortState = {
@@ -331,6 +347,12 @@
       const urlHandle = encodeURIComponent(handle);
       if (/^(Prateek|Amit|Mahima|Anup|Shanti|Chhotu)$/i.test(handle)) return safeHandle;
       return `<a href="https://www.codechef.com/users/${urlHandle}" target="_blank" rel="noopener noreferrer">${safeHandle}</a>`;
+    }
+
+    function atcoderUserLink(handle) {
+      if (!handle) return "-";
+      const safeHandle = escapeHtml(handle);
+      return `<a href="https://atcoder.jp/users/${encodeURIComponent(handle)}" target="_blank" rel="noopener noreferrer">${safeHandle}</a>`;
     }
 
     function compareValues(a, b, direction) {
@@ -405,6 +427,225 @@
       });
     }
 
+    function enrichIndividualsFromProfiles() {
+      const profiles = new Map((DATA.profile_stats || []).map(profile => [String(profile.name || "").toLowerCase(), profile]));
+      DATA.individual_leaderboard.forEach(row => {
+        const profile = profiles.get(String(row.name || "").toLowerCase());
+        if (!profile) return;
+        row.codechef_handle = profile.codechef_handle || row.codechef_handle;
+        row.codechef_current_rating = profile.codechef_current_rating || "";
+        row.codechef_highest_rating = profile.codechef_highest_rating || "";
+        row.atcoder_handle = profile.atcoder_handle || "";
+        row.atcoder_current_rating = profile.atcoder_current_rating || "";
+        row.atcoder_highest_rating = profile.atcoder_highest_rating || "";
+      });
+    }
+
+    function prepareData() {
+      contests = DATA.contests.map(contest => contest.code);
+      displayedContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+      enrichIndividualsFromProfiles();
+      DATA.team_leaderboard = buildTeamLeaderboard();
+    }
+
+    async function init() {
+      const liveData = await loadLiveData();
+      if (liveData) DATA = liveData;
+      prepareData();
+      render();
+    }
+
+    async function loadLiveData() {
+      const urls = Object.values(CONFIG).filter(Boolean);
+      if (!urls.length) return null;
+
+      const [members, profiles, scores, links] = await Promise.all([
+        loadCsv(CONFIG.membersCsvUrl),
+        loadCsv(CONFIG.profileStatsCsvUrl),
+        loadCsv(CONFIG.contestScoresCsvUrl),
+        loadCsv(CONFIG.contestLinksCsvUrl)
+      ]);
+
+      if (!members.length && !profiles.length && !scores.length && !links.length) return null;
+      return buildDataFromRows(members, profiles, scores, links);
+    }
+
+    async function loadCsv(url) {
+      if (!url) return [];
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Could not load " + url);
+      return parseCsv(await response.text());
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let value = "";
+      let quoted = false;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const char = text[index];
+        const next = text[index + 1];
+        if (char === '"' && quoted && next === '"') {
+          value += '"';
+          index += 1;
+        } else if (char === '"') {
+          quoted = !quoted;
+        } else if (char === "," && !quoted) {
+          row.push(value);
+          value = "";
+        } else if ((char === "\n" || char === "\r") && !quoted) {
+          if (char === "\r" && next === "\n") index += 1;
+          row.push(value);
+          rows.push(row);
+          row = [];
+          value = "";
+        } else {
+          value += char;
+        }
+      }
+
+      if (value || row.length) {
+        row.push(value);
+        rows.push(row);
+      }
+
+      const headers = (rows.shift() || []).map(item => item.trim());
+      return rows
+        .filter(item => item.some(Boolean))
+        .map(item => Object.fromEntries(headers.map((header, index) => [header, (item[index] || "").trim()])));
+    }
+
+    function field(row, names) {
+      const keys = Object.keys(row || {});
+      const wanted = names.map(name => String(name).toLowerCase());
+      const key = keys.find(item => wanted.includes(item.toLowerCase()));
+      return key ? row[key] : "";
+    }
+
+    function numeric(value) {
+      return Number(String(value || "").replace(/[^\d.-]/g, "")) || 0;
+    }
+
+    function attendedValue(value) {
+      return /^(yes|y|true|1|attended)$/i.test(String(value || "").trim());
+    }
+
+    function buildDataFromRows(memberRows, profileRows, scoreRows, linkRows) {
+      const profileStats = profileRows.map(row => ({
+        name: field(row, ["Name"]),
+        codechef_handle: field(row, ["CodeChef Handle"]),
+        codechef_current_rating: numeric(field(row, ["CodeChef Current Rating"])),
+        codechef_highest_rating: numeric(field(row, ["CodeChef Highest Rating"])),
+        atcoder_handle: field(row, ["AtCoder Handle"]),
+        atcoder_current_rating: numeric(field(row, ["AtCoder Current Rating"])),
+        atcoder_highest_rating: numeric(field(row, ["AtCoder Highest Rating"]))
+      })).filter(row => row.name);
+
+      const profileByName = new Map(profileStats.map(row => [row.name.toLowerCase(), row]));
+      const fallbackByName = new Map(DATA.individual_leaderboard.map(row => [row.name.toLowerCase(), row]));
+      const members = memberRows.length ? memberRows : profileStats.map(profile => ({
+        Name: profile.name,
+        Team: (fallbackByName.get(profile.name.toLowerCase()) || {}).team_name || "",
+        CodeChef: profile.codechef_handle,
+        AtCoder: profile.atcoder_handle
+      }));
+
+      const contestLinks = linkRows.length ? linkRows.map(row => ({
+        label: field(row, ["Platform", "Label"]) || "CodeChef contest",
+        code: field(row, ["Contest Code", "Code"]),
+        name: field(row, ["Title", "Contest Name", "Name"]),
+        url: field(row, ["Link", "URL"]),
+        note: field(row, ["Notes", "Note"])
+      })).filter(row => row.code) : DATA.contest_links;
+
+      const contestByCode = new Map(DATA.contests.map(row => [row.code, { ...row }]));
+      contestLinks.forEach(row => {
+        contestByCode.set(row.code, {
+          code: row.code,
+          name: row.name || row.code,
+          url: row.url || "",
+          label: row.label || "CodeChef contest",
+          note: row.note || ""
+        });
+      });
+      scoreRows.forEach(row => {
+        const code = field(row, ["Contest Code", "Code"]);
+        if (!code || contestByCode.has(code)) return;
+        contestByCode.set(code, {
+          code,
+          name: field(row, ["Contest Name", "Title"]) || code,
+          url: field(row, ["Contest Link", "Link", "URL"]),
+          label: "CodeChef contest",
+          note: ""
+        });
+      });
+
+      const scoreByMember = new Map();
+      scoreRows.forEach(row => {
+        const name = field(row, ["Name"]);
+        const code = field(row, ["Contest Code", "Code"]);
+        if (!name || !code) return;
+        const key = name.toLowerCase();
+        if (!scoreByMember.has(key)) scoreByMember.set(key, {});
+        scoreByMember.get(key)[code] = {
+          solved: numeric(field(row, ["Problems Solved", "Solved"])),
+          attended: attendedValue(field(row, ["Attended"])),
+          rank: field(row, ["Contest Rank", "Rank"])
+        };
+      });
+
+      const individualRows = members.map((member, index) => {
+        const name = field(member, ["Name"]);
+        const profile = profileByName.get(name.toLowerCase()) || {};
+        const fallback = fallbackByName.get(name.toLowerCase()) || {};
+        const memberScores = scoreByMember.get(name.toLowerCase()) || {};
+        const scores = {};
+        Array.from(contestByCode.keys()).forEach(code => {
+          scores[code] = memberScores[code] || { solved: 0, attended: false, rank: "" };
+        });
+        const totalSolved = Object.values(scores).reduce((sum, item) => sum + (isAttended(item) ? numeric(item.solved) : 0), 0);
+
+        return {
+          name,
+          team_name: field(member, ["Team"]) || profile.team_name || fallback.team_name || "Unassigned",
+          codechef_handle: field(member, ["CodeChef"]) || profile.codechef_handle || fallback.codechef_handle || "",
+          atcoder_handle: field(member, ["AtCoder"]) || profile.atcoder_handle || fallback.atcoder_handle || "",
+          scores,
+          total_solved: totalSolved,
+          rank: index + 1
+        };
+      }).filter(row => row.name);
+
+      const teamsByName = new Map(DATA.teams.map(team => [team.team_name, { ...team }]));
+      individualRows.forEach(member => {
+        if (!teamsByName.has(member.team_name)) teamsByName.set(member.team_name, { team: teamsByName.size + 1, team_name: member.team_name, captain: "" });
+      });
+
+      return {
+        ...DATA,
+        generated_at: new Date().toISOString(),
+        contests: Array.from(contestByCode.values()),
+        contest_links: contestLinks,
+        teams: Array.from(teamsByName.values()),
+        individual_leaderboard: individualRows,
+        profile_stats: profileStats,
+        team_roster: buildRoster(Array.from(teamsByName.values()), individualRows)
+      };
+    }
+
+    function buildRoster(teams, individuals) {
+      return teams.map(team => {
+        const members = individuals.filter(member => member.team_name === team.team_name);
+        return {
+          team: team.team,
+          team_name: team.team_name,
+          captain: team.captain || (members[0] ? members[0].name : ""),
+          handles: members.map(member => member.codechef_handle || member.name)
+        };
+      });
+    }
+
     function renderSummary() {
       const teams = DATA.team_leaderboard.length;
       const handles = DATA.team_roster.reduce((sum, team) => sum + team.handles.length, 0);
@@ -453,12 +694,17 @@
     function renderIndividualTable() {
       const headers = [
         { label: "Rank", key: "rank", width: "7%" },
-        { label: "Name", key: "name", text: true, width: "16%" },
-        { label: "Team", key: "team_name", text: true, width: "14%" },
-        { label: "CodeChef", key: "codechef_handle", text: true, width: "18%" },
-        { label: "Total Solved", key: "total_solved", width: "12%" }
+        { label: "Name", key: "name", text: true, width: "13%" },
+        { label: "Team", key: "team_name", text: true, width: "11%" },
+        { label: "CodeChef", key: "codechef_handle", text: true, width: "13%" },
+        { label: "CC Current", key: "codechef_current_rating", width: "10%" },
+        { label: "CC Highest", key: "codechef_highest_rating", width: "10%" },
+        { label: "AtCoder", key: "atcoder_handle", text: true, width: "13%" },
+        { label: "AC Current", key: "atcoder_current_rating", width: "10%" },
+        { label: "AC Highest", key: "atcoder_highest_rating", width: "10%" },
+        { label: "Total Solved", key: "total_solved", width: "10%" }
       ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved / Status"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
-      const rows = DATA.individual_leaderboard.filter(row => matches(row.name + " " + row.team_name + " " + row.codechef_handle));
+      const rows = DATA.individual_leaderboard.filter(row => matches([row.name, row.team_name, row.codechef_handle, row.atcoder_handle].join(" ")));
       const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? row.scores[key.slice(8)].solved : row[key]);
       const htmlRows = sorted.map(row => {
         const cells = [
@@ -466,6 +712,11 @@
           `<td class="text"><strong>${escapeHtml(row.name)}</strong></td>`,
           `<td class="text">${escapeHtml(row.team_name)}</td>`,
           `<td class="text">${codechefUserLink(row.codechef_handle)}</td>`,
+          `<td>${row.codechef_current_rating ? number(row.codechef_current_rating) : "-"}</td>`,
+          `<td>${row.codechef_highest_rating ? number(row.codechef_highest_rating) : "-"}</td>`,
+          `<td class="text">${atcoderUserLink(row.atcoder_handle)}</td>`,
+          `<td>${row.atcoder_current_rating ? number(row.atcoder_current_rating) : "-"}</td>`,
+          `<td>${row.atcoder_highest_rating ? number(row.atcoder_highest_rating) : "-"}</td>`,
           `<td><strong>${number(row.total_solved)}</strong></td>`
         ];
         displayedContests.forEach(contest => {
@@ -576,7 +827,11 @@
       });
     });
 
-    render();
+    init().catch(error => {
+      prepareData();
+      render();
+      document.getElementById("note").textContent = "Could not load live sheet data. Showing embedded fallback data. " + error.message;
+    });
   </script>
 </body>
 </html>
