@@ -481,6 +481,10 @@ function refreshCodeChefContestScores(contestCode) {
   return summary;
 }
 
+function refreshSTART249ContestScores() {
+  return refreshCodeChefContestScores("START249");
+}
+
 function getMembersForContestScores() {
   const sheet = getMembersSheet();
   const values = sheet.getDataRange().getValues();
