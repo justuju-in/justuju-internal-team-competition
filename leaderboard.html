@@ -264,7 +264,7 @@
     let DATA = {
       title: "Justuju Internal Team Competition",
       generated_at: "2026-07-28T16:20:00+05:30",
-      scoring_note: "Team score is the average solved by attended members: total problems solved divided by attended members. Attended members with 0 solved are counted; absent members are not counted.",
+      scoring_note: "Team score is the sum of member contest scores. CodeChef solved problems count as 1 point each. AtCoder Beginner Contest solved problems count as 0.5 point each when the member attended.",
       contests: [
         {
           code: "START249",
@@ -280,7 +280,7 @@
           code: "START249",
           name: "CodeChef Starters 249",
           url: "https://www.codechef.com/START249",
-          note: "Track contest problems solved and attendance. Team rank changes by average solved among attended members."
+          note: "Track contest problems solved and attendance. Team rank changes by total team score."
         }
       ],
       teams: [
@@ -370,10 +370,25 @@
       return score && (score.attended === true || String(score.attended).toLowerCase() === "yes");
     }
 
+    function contestMeta(code, contestList) {
+      return (contestList || DATA.contests).find(contest => contest.code === code) || {};
+    }
+
+    function contestWeight(code, contestList) {
+      const contest = contestMeta(code, contestList);
+      const text = [contest.code, contest.name, contest.label, contest.url, contest.note].join(" ").toLowerCase();
+      return /atcoder|beginner|abc/.test(text) ? 0.5 : 1;
+    }
+
+    function scorePoints(score, code, contestList) {
+      return isAttended(score) ? Number(score.solved || 0) * contestWeight(code, contestList) : 0;
+    }
+
     function buildTeamLeaderboard() {
       const teams = DATA.teams.map(team => {
         const members = DATA.individual_leaderboard.filter(member => member.team_name === team.team_name);
         const contestsSummary = {};
+        let scoreTotal = 0;
         let solvedTotal = 0;
         let attendedTotal = 0;
 
@@ -383,15 +398,17 @@
             if (isAttended(score)) {
               summary.attended += 1;
               summary.solved += Number(score.solved || 0);
+              summary.points += scorePoints(score, code);
             }
             return summary;
-          }, { solved: 0, attended: 0 });
+          }, { solved: 0, points: 0, attended: 0 });
 
           contestsSummary[code] = {
             solved: contestSummary.solved,
             attended: contestSummary.attended,
-            average: contestSummary.attended ? contestSummary.solved / contestSummary.attended : 0
+            points: contestSummary.points
           };
+          scoreTotal += contestSummary.points;
           solvedTotal += contestSummary.solved;
           attendedTotal += contestSummary.attended;
         });
@@ -400,16 +417,17 @@
           ...team,
           members: members.length,
           contests: contestsSummary,
+          score_total: scoreTotal,
           solved_total: solvedTotal,
           attended_total: attendedTotal,
-          average_score: attendedTotal ? solvedTotal / attendedTotal : 0
+          average_score: scoreTotal
         };
-      }).sort((a, b) => b.average_score - a.average_score || b.solved_total - a.solved_total || b.attended_total - a.attended_total || a.team_name.localeCompare(b.team_name));
+      }).sort((a, b) => b.score_total - a.score_total || b.solved_total - a.solved_total || b.attended_total - a.attended_total || a.team_name.localeCompare(b.team_name));
 
       let lastKey = "";
       let lastRank = 0;
       return teams.map((team, index) => {
-        const key = [team.average_score, team.solved_total, team.attended_total].join("|");
+        const key = [team.score_total, team.solved_total, team.attended_total].join("|");
         const rank = key === lastKey ? lastRank : index + 1;
         lastKey = key;
         lastRank = rank;
@@ -585,6 +603,7 @@
         };
       });
 
+      const loadedContests = Array.from(contestByCode.values());
       const individualRows = members.map((member, index) => {
         const name = field(member, ["Name"]);
         const profile = profileByName.get(name.toLowerCase()) || {};
@@ -594,7 +613,7 @@
         Array.from(contestByCode.keys()).forEach(code => {
           scores[code] = memberScores[code] || { solved: 0, attended: false, rank: "" };
         });
-        const totalSolved = Object.values(scores).reduce((sum, item) => sum + (isAttended(item) ? numeric(item.solved) : 0), 0);
+        const totalSolved = Object.entries(scores).reduce((sum, [code, item]) => sum + scorePoints(item, code, loadedContests), 0);
 
         return {
           name,
@@ -615,7 +634,7 @@
       return {
         ...DATA,
         generated_at: new Date().toISOString(),
-        contests: Array.from(contestByCode.values()),
+        contests: loadedContests,
         contest_links: contestLinks,
         teams: Array.from(teamsByName.values()),
         individual_leaderboard: individualRows,
@@ -655,12 +674,12 @@
         { label: "Team", key: "team_name", text: true, width: "18%" },
         { label: "Captain", key: "captain", text: true, width: "16%" },
         { label: "Members", key: "members", width: "10%" },
-        { label: "Team Score", key: "average_score", width: "12%" },
+        { label: "Team Score", key: "score_total", width: "12%" },
         { label: "Attended", key: "attended_total", width: "10%" },
         { label: "Total Solved", key: "solved_total", width: "12%" }
-      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Avg / Attended"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
+      ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Score / Attended"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
       const rows = DATA.team_leaderboard.filter(row => matches(row.team_name + " " + row.captain));
-      const sorted = sortedRows("team", rows, (row, key) => key.startsWith("contest:") ? row.contests[key.slice(8)].average : row[key]);
+      const sorted = sortedRows("team", rows, (row, key) => key.startsWith("contest:") ? row.contests[key.slice(8)].points : row[key]);
       const htmlRows = sorted.map(row => {
         const cls = row.rank === 1 ? "rank rank-one" : "rank";
         const cells = [
@@ -668,13 +687,13 @@
           `<td class="text"><strong>${escapeHtml(row.team_name)}</strong></td>`,
           `<td class="text">${escapeHtml(row.captain)}</td>`,
           `<td>${row.members}</td>`,
-          `<td><strong>${number(row.average_score)}</strong></td>`,
+          `<td><strong>${number(row.score_total)}</strong></td>`,
           `<td>${number(row.attended_total)}</td>`,
           `<td><strong>${number(row.solved_total)}</strong></td>`
         ];
         displayedContests.forEach(contest => {
-          const item = row.contests[contest.code] || { solved: 0, attended: 0, average: 0 };
-          cells.push(`<td title="Solved: ${number(item.solved)}">${number(item.average)} / ${number(item.attended)}</td>`);
+          const item = row.contests[contest.code] || { solved: 0, attended: 0, points: 0 };
+          cells.push(`<td title="Solved: ${number(item.solved)}">${number(item.points)} / ${number(item.attended)}</td>`);
         });
         return `<tr>${cells.join("")}</tr>`;
       });
@@ -690,10 +709,10 @@
         { label: "CC Highest", key: "codechef_highest_rating", width: "12%" },
         { label: "AC Current", key: "atcoder_current_rating", width: "12%" },
         { label: "AC Highest", key: "atcoder_highest_rating", width: "12%" },
-        { label: "Total Solved", key: "total_solved", width: "12%" }
+        { label: "Total Score", key: "total_solved", width: "12%" }
       ].concat(displayedContests.map(contest => ({ label: contest.code, lines: [contest.code, "Solved / Status"], key: "contest:" + contest.code, url: contest.url, width: "14%" })));
       const rows = DATA.individual_leaderboard.filter(row => matches([row.name, row.team_name].join(" ")));
-      const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? row.scores[key.slice(8)].solved : row[key]);
+      const sorted = sortedRows("individual", rows, (row, key) => key.startsWith("contest:") ? scorePoints(row.scores[key.slice(8)], key.slice(8)) : row[key]);
       const htmlRows = sorted.map(row => {
         const cells = [
           `<td class="rank">${row.rank}</td>`,

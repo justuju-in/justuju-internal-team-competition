@@ -132,14 +132,17 @@ For CodeChef contests, keep scoring simple:
 
 ```text
 Individual score = Problems Solved
-Team score = Total Problems Solved / Attended Members
+Team score = Sum of all member scores
+CodeChef solved problem = 1 point
+AtCoder Beginner Contest solved problem = 0.5 point if the member attended
 Team rank = Highest Team score first
 ```
 
 After every contest, run `refreshCodeChefContestScores` in Apps Script. It reads the `CodeChef` handles from `Members`, checks the CodeChef Starters division ranklists, and updates `Problems Solved`, `Attended`, and `Contest Rank` in `Contest Scores`.
 
 - If a member attended and solved 0 problems, set `Attended` to `Yes` and `Problems Solved` to `0`.
-- If a member did not attend, set `Attended` to `No`; that member is not counted in the team average.
+- If a member did not attend, set `Attended` to `No`; that member adds `0` points.
+- For AtCoder Beginner Contest scoring, make sure the contest name, label, link, or code in `Contest Links` contains `AtCoder`, `Beginner`, or `ABC`.
 
 For another CodeChef contest, change `CODECHEF_CONTEST_CODE` in `apps_script_code.gs`, or run the function with a contest code argument from another helper:
 
