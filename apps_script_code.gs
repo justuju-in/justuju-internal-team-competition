@@ -6,6 +6,9 @@ const DOMJUDGE_BASE_URL = "https://judge.csbasics.in";
 const DOMJUDGE_CONTEST_ID = "1";
 const CODECHEF_CONTEST_CODE = "START249";
 const CODECHEF_CONTEST_DIVISIONS = ["A", "B", "C", "D", "E"];
+const ATCODER_CONTEST_CODE = "abc469";
+const ATCODER_CONTEST_NAME = "AtCoder Beginner Contest 469";
+const ATCODER_CONTEST_START_SECOND = 1785585600;
 
 const MEMBER_HEADERS = ["Timestamp", "Email", "Name", "Team", "CodeChef", "Codeforces", "LeetCode", "AtCoder", "DOMjudge"];
 const CONTEST_SCORE_HEADERS = ["Date", "Contest Code", "Contest Name", "Contest Link", "Name", "Team", "Problems Solved", "Attended", "Contest Rank", "Updated By", "Notes"];
@@ -485,6 +488,51 @@ function refreshSTART249ContestScores() {
   return refreshCodeChefContestScores("START249");
 }
 
+function refreshAtCoderContestScores(contestCode, contestName, fromSecond) {
+  const code = clean(contestCode) || ATCODER_CONTEST_CODE;
+  const name = clean(contestName) || ATCODER_CONTEST_NAME;
+  const since = Number(fromSecond) || ATCODER_CONTEST_START_SECOND;
+  const members = getMembersForAtCoderContestScores();
+
+  if (!members.length) {
+    throw new Error("No AtCoder handles found in Members sheet.");
+  }
+
+  const rows = members.map((member) => {
+    const result = fetchAtCoderContestResult(member.atCoder, code, since);
+    const attended = result.submissions > 0;
+    const notes = attended
+      ? "Auto fetched from AtCoder Problems API"
+      : "No submissions found for this contest";
+
+    return [
+      new Date(),
+      code.toUpperCase(),
+      name,
+      "https://atcoder.jp/contests/" + code,
+      member.name,
+      member.team,
+      result.solved,
+      attended ? "Yes" : "No",
+      "",
+      "Auto",
+      notes
+    ];
+  });
+
+  upsertContestScoreRows(code.toUpperCase(), rows);
+  const summary = rows.reduce((acc, row) => {
+    acc[row[4]] = { contestCode: row[1], solved: row[6], attended: row[7], notes: row[10] };
+    return acc;
+  }, {});
+  Logger.log(JSON.stringify(summary));
+  return summary;
+}
+
+function refreshABC469ContestScores() {
+  return refreshAtCoderContestScores("abc469", "AtCoder Beginner Contest 469", 1785585600);
+}
+
 function getMembersForContestScores() {
   const sheet = getMembersSheet();
   const values = sheet.getDataRange().getValues();
@@ -497,6 +545,46 @@ function getMembersForContestScores() {
     team: valueByHeader(headers, row, "Team"),
     codeChef: valueByHeader(headers, row, "CodeChef")
   })).filter((member) => member.name && member.team);
+}
+
+function getMembersForAtCoderContestScores() {
+  const sheet = getMembersSheet();
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+
+  const headers = values[0].map(String);
+  return values.slice(1).map((row) => ({
+    email: valueByHeader(headers, row, "Email"),
+    name: valueByHeader(headers, row, "Name"),
+    team: valueByHeader(headers, row, "Team"),
+    atCoder: valueByHeader(headers, row, "AtCoder")
+  })).filter((member) => member.name && member.team && member.atCoder);
+}
+
+function fetchAtCoderContestResult(username, contestCode, fromSecond) {
+  const url = "https://kenkoooo.com/atcoder/atcoder-api/v3/user/submissions?user=" +
+    encodeURIComponent(username) + "&from_second=" + encodeURIComponent(fromSecond);
+  const result = fetchJson(url);
+
+  if (!result.ok || !Array.isArray(result.json)) {
+    return { solved: 0, submissions: 0 };
+  }
+
+  const contestSubmissions = result.json.filter((submission) => {
+    return String(submission.contest_id || "").toLowerCase() === String(contestCode || "").toLowerCase();
+  });
+  const solvedProblems = {};
+
+  contestSubmissions.forEach((submission) => {
+    if (submission.result === "AC") {
+      solvedProblems[submission.problem_id] = true;
+    }
+  });
+
+  return {
+    solved: Object.keys(solvedProblems).length,
+    submissions: contestSubmissions.length
+  };
 }
 
 function fetchCodeChefRankingDivision(contestCode, wantedHandles, alreadyFound) {
