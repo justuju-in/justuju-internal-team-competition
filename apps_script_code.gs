@@ -6,9 +6,7 @@ const DOMJUDGE_BASE_URL = "https://judge.csbasics.in";
 const DOMJUDGE_CONTEST_ID = "1";
 const CODECHEF_CONTEST_CODE = "START249";
 const CODECHEF_CONTEST_DIVISIONS = ["A", "B", "C", "D", "E"];
-const ATCODER_CONTEST_CODE = "abc469";
-const ATCODER_CONTEST_NAME = "AtCoder Beginner Contest 469";
-const ATCODER_CONTEST_START_SECOND = 1785585600;
+const ATCODER_CONTESTS_API_URL = "https://kenkoooo.com/atcoder/resources/contests.json";
 
 const MEMBER_HEADERS = ["Timestamp", "Email", "Name", "Team", "CodeChef", "Codeforces", "LeetCode", "AtCoder", "DOMjudge"];
 const CONTEST_SCORE_HEADERS = ["Date", "Contest Code", "Contest Name", "Contest Link", "Name", "Team", "Problems Solved", "Attended", "Contest Rank", "Updated By", "Notes"];
@@ -489,9 +487,16 @@ function refreshSTART249ContestScores() {
 }
 
 function refreshAtCoderContestScores(contestCode, contestName, fromSecond) {
-  const code = clean(contestCode) || ATCODER_CONTEST_CODE;
-  const name = clean(contestName) || ATCODER_CONTEST_NAME;
-  const since = Number(fromSecond) || ATCODER_CONTEST_START_SECOND;
+  const contest = contestCode
+    ? {
+        id: clean(contestCode).toLowerCase(),
+        title: clean(contestName) || clean(contestCode).toUpperCase(),
+        start_epoch_second: Number(fromSecond) || 0
+      }
+    : getLatestAtCoderBeginnerContest();
+  const code = contest.id;
+  const name = contest.title;
+  const since = Number(contest.start_epoch_second) || 0;
   const members = getMembersForAtCoderContestScores();
 
   if (!members.length) {
@@ -529,8 +534,56 @@ function refreshAtCoderContestScores(contestCode, contestName, fromSecond) {
   return summary;
 }
 
+function refreshLatestAtCoderBeginnerContestScores() {
+  return refreshAtCoderContestScores();
+}
+
+function createWeeklyAtCoderScoreTrigger() {
+  deleteWeeklyAtCoderScoreTrigger();
+  ScriptApp.newTrigger("refreshLatestAtCoderBeginnerContestScores")
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.SATURDAY)
+    .atHour(23)
+    .create();
+  return { created: true, functionName: "refreshLatestAtCoderBeginnerContestScores" };
+}
+
+function deleteWeeklyAtCoderScoreTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach((trigger) => {
+    if (trigger.getHandlerFunction() === "refreshLatestAtCoderBeginnerContestScores") {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  return { deleted: true };
+}
+
 function refreshABC469ContestScores() {
   return refreshAtCoderContestScores("abc469", "AtCoder Beginner Contest 469", 1785585600);
+}
+
+function getLatestAtCoderBeginnerContest() {
+  const result = fetchJson(ATCODER_CONTESTS_API_URL);
+  if (!result.ok || !Array.isArray(result.json)) {
+    throw new Error("Could not fetch AtCoder contest list.");
+  }
+
+  const nowSecond = Math.floor(Date.now() / 1000);
+  const contests = result.json
+    .filter((contest) => {
+      const id = String(contest.id || "").toLowerCase();
+      const title = String(contest.title || "");
+      return /^abc\d+$/.test(id) &&
+        /AtCoder Beginner Contest/i.test(title) &&
+        Number(contest.start_epoch_second) <= nowSecond;
+    })
+    .sort((a, b) => Number(b.start_epoch_second) - Number(a.start_epoch_second));
+
+  if (!contests.length) {
+    throw new Error("No past AtCoder Beginner Contest found.");
+  }
+
+  return contests[0];
 }
 
 function getMembersForContestScores() {

@@ -140,7 +140,9 @@ Team rank = Highest Team score first
 
 After every contest, run `refreshCodeChefContestScores` in Apps Script. It reads the `CodeChef` handles from `Members`, checks the CodeChef Starters division ranklists, and updates `Problems Solved`, `Attended`, and `Contest Rank` in `Contest Scores`.
 
-For AtCoder Beginner Contest 469, run `refreshABC469ContestScores` in Apps Script. It reads the `AtCoder` handles from `Members`, fetches public submissions through the AtCoder Problems API, counts unique accepted problems, and writes `ABC469` rows into `Contest Scores`.
+For AtCoder Beginner Contests, run `refreshLatestAtCoderBeginnerContestScores` in Apps Script. It finds the latest past ABC automatically, reads the `AtCoder` handles from `Members`, fetches public submissions through the AtCoder Problems API, counts unique accepted problems, and writes that contest into `Contest Scores`.
+
+To make AtCoder score fetching automatic every Saturday night, run `createWeeklyAtCoderScoreTrigger` once in Apps Script.
 
 - If a member attended and solved 0 problems, set `Attended` to `Yes` and `Problems Solved` to `0`.
 - If a member did not attend, set `Attended` to `No`; that member adds `0` points.
