@@ -495,7 +495,7 @@ function refreshSTART250ContestScores() {
 }
 
 function createWeeklyCodeChefScoreTrigger() {
-  deleteWeeklyCodeChefScoreTrigger();
+  deleteCodeChefScoreTriggers();
   ScriptApp.newTrigger("refreshCurrentCodeChefContestScores")
     .timeBased()
     .onWeekDay(ScriptApp.WeekDay.WEDNESDAY)
@@ -505,9 +505,10 @@ function createWeeklyCodeChefScoreTrigger() {
 }
 
 function createTodayCodeChefScoreTrigger() {
+  deleteCodeChefScoreTriggers();
   const now = new Date();
   const runAt = new Date(now);
-  runAt.setHours(22, 15, 0, 0);
+  runAt.setHours(22, 5, 0, 0);
 
   if (runAt.getTime() <= now.getTime()) {
     runAt.setTime(now.getTime() + 10 * 60 * 1000);
@@ -521,6 +522,10 @@ function createTodayCodeChefScoreTrigger() {
 }
 
 function deleteWeeklyCodeChefScoreTrigger() {
+  return deleteCodeChefScoreTriggers();
+}
+
+function deleteCodeChefScoreTriggers() {
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach((trigger) => {
     if (trigger.getHandlerFunction() === "refreshCurrentCodeChefContestScores") {
