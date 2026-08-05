@@ -5,6 +5,7 @@ const CONTEST_SCORES_SHEET = "Contest Scores";
 const DOMJUDGE_BASE_URL = "https://judge.csbasics.in";
 const DOMJUDGE_CONTEST_ID = "1";
 const CODECHEF_CONTEST_CODE = "START250";
+const CODECHEF_CONTESTS_API_URL = "https://www.codechef.com/api/list/contests/all";
 const CODECHEF_CONTEST_DIVISIONS = ["A", "B", "C", "D", "E"];
 const ATCODER_CONTESTS_API_URL = "https://kenkoooo.com/atcoder/resources/contests.json";
 
@@ -421,6 +422,34 @@ function refreshAllProfileStats() {
   return { refreshed };
 }
 
+function createWeeklyRatingRefreshTrigger() {
+  deleteRatingRefreshTriggers();
+  ScriptApp.newTrigger("refreshAllProfileStats")
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.THURSDAY)
+    .atHour(8)
+    .nearMinute(0)
+    .create();
+  return { created: true, functionName: "refreshAllProfileStats" };
+}
+
+function deleteRatingRefreshTriggers() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach((trigger) => {
+    if (trigger.getHandlerFunction() === "refreshAllProfileStats") {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  return { deleted: true };
+}
+
+function createAllWeeklyAutomationTriggers() {
+  const codeChef = createWeeklyCodeChefScoreTrigger();
+  const atCoder = createWeeklyAtCoderScoreTrigger();
+  const ratings = createWeeklyRatingRefreshTrigger();
+  return { codeChef, atCoder, ratings };
+}
+
 function refreshCodeChefContestScores(contestCode) {
   const code = clean(contestCode) || CODECHEF_CONTEST_CODE;
   const members = getMembersForContestScores();
@@ -487,7 +516,8 @@ function refreshSTART249ContestScores() {
 }
 
 function refreshCurrentCodeChefContestScores() {
-  return refreshCodeChefContestScores(CODECHEF_CONTEST_CODE);
+  const contest = getLatestCodeChefStartersContest();
+  return refreshCodeChefContestScores(contest.baseCode);
 }
 
 function refreshSTART250ContestScores() {
@@ -499,7 +529,8 @@ function createWeeklyCodeChefScoreTrigger() {
   ScriptApp.newTrigger("refreshCurrentCodeChefContestScores")
     .timeBased()
     .onWeekDay(ScriptApp.WeekDay.WEDNESDAY)
-    .atHour(23)
+    .atHour(22)
+    .nearMinute(5)
     .create();
   return { created: true, functionName: "refreshCurrentCodeChefContestScores" };
 }
@@ -533,6 +564,43 @@ function deleteCodeChefScoreTriggers() {
     }
   });
   return { deleted: true };
+}
+
+function getLatestCodeChefStartersContest() {
+  const result = fetchJson(CODECHEF_CONTESTS_API_URL);
+  if (!result.ok || !result.json || result.json.status !== "success") {
+    return { baseCode: CODECHEF_CONTEST_CODE, name: "CodeChef Starters " + CODECHEF_CONTEST_CODE.replace(/^START/i, "") };
+  }
+
+  const allContests = []
+    .concat(result.json.present_contests || [])
+    .concat(result.json.future_contests || [])
+    .concat(result.json.contests || [])
+    .concat(result.json.past_contests || []);
+  const now = new Date();
+  const graceMs = 3 * 60 * 60 * 1000;
+  const starters = allContests
+    .filter((contest) => {
+      const code = String(contest.contest_code || "");
+      const name = String(contest.contest_name || "");
+      const start = new Date(contest.contest_start_date_iso || contest.contest_start_date);
+      return /^START\d+[A-Z]?$/i.test(code) &&
+        /Starters/i.test(name) &&
+        !isNaN(start.getTime()) &&
+        start.getTime() <= now.getTime() + graceMs;
+    })
+    .map((contest) => {
+      const rawCode = String(contest.contest_code || "").toUpperCase();
+      return {
+        rawCode,
+        baseCode: rawCode.replace(/[A-Z]$/, ""),
+        name: contest.contest_name || rawCode,
+        start: new Date(contest.contest_start_date_iso || contest.contest_start_date).getTime()
+      };
+    })
+    .sort((a, b) => b.start - a.start);
+
+  return starters[0] || { baseCode: CODECHEF_CONTEST_CODE, name: "CodeChef Starters " + CODECHEF_CONTEST_CODE.replace(/^START/i, "") };
 }
 
 function refreshAtCoderContestScores(contestCode, contestName, fromSecond) {

@@ -138,9 +138,13 @@ AtCoder Beginner Contest solved problem = 0.5 point if the member attended
 Team rank = Highest Team score first
 ```
 
-After every contest, run `refreshCurrentCodeChefContestScores` in Apps Script. It reads the `CodeChef` handles from `Members`, checks the CodeChef Starters division ranklists for the current `CODECHEF_CONTEST_CODE`, and updates `Problems Solved`, `Attended`, and `Contest Rank` in `Contest Scores`.
+After every CodeChef Starters contest, run `refreshCurrentCodeChefContestScores` in Apps Script. It automatically finds the latest Starters contest, reads the `CodeChef` handles from `Members`, checks the division ranklists, and updates `Problems Solved`, `Attended`, and `Contest Rank` in `Contest Scores`.
 
-For today's START250 contest, run `createTodayCodeChefScoreTrigger` once before 10 PM. It will delete old CodeChef score triggers and fetch scores at about 10:05 PM IST. To keep CodeChef score fetching automatic every Wednesday night, run `createWeeklyCodeChefScoreTrigger` once.
+For today's contest, run `createTodayCodeChefScoreTrigger` once before 10 PM. It will delete old CodeChef score triggers and fetch scores at about 10:05 PM IST. To keep CodeChef score fetching automatic every Wednesday night around 10:05 PM, run `createWeeklyCodeChefScoreTrigger` once.
+
+To refresh profile ratings automatically every Thursday morning, run `createWeeklyRatingRefreshTrigger` once in Apps Script.
+
+To create all recurring triggers at once, run `createAllWeeklyAutomationTriggers` once.
 
 For AtCoder Beginner Contests, run `refreshLatestAtCoderBeginnerContestScores` in Apps Script. It finds the latest past ABC automatically, reads the `AtCoder` handles from `Members`, fetches public submissions through the AtCoder Problems API, counts unique accepted problems, and writes that contest into `Contest Scores`.
 
@@ -150,10 +154,10 @@ To make AtCoder score fetching automatic every Saturday night, run `createWeekly
 - If a member did not attend, set `Attended` to `No`; that member adds `0` points.
 - For AtCoder Beginner Contest scoring, make sure the contest name, label, link, or code in `Contest Links` contains `AtCoder`, `Beginner`, or `ABC`.
 
-For another CodeChef contest, change `CODECHEF_CONTEST_CODE` in `apps_script_code.gs`, or run the function with a contest code argument from another helper:
+For a specific CodeChef contest, you can still run the fetcher with a code argument from a small helper:
 
 ```javascript
 function refreshNextContest() {
-  refreshCodeChefContestScores("START250");
+  refreshCodeChefContestScores("START251");
 }
 ```
