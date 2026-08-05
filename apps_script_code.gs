@@ -4,7 +4,7 @@ const STATS_SHEET = "Profile Stats";
 const CONTEST_SCORES_SHEET = "Contest Scores";
 const DOMJUDGE_BASE_URL = "https://judge.csbasics.in";
 const DOMJUDGE_CONTEST_ID = "1";
-const CODECHEF_CONTEST_CODE = "START249";
+const CODECHEF_CONTEST_CODE = "START250";
 const CODECHEF_CONTEST_DIVISIONS = ["A", "B", "C", "D", "E"];
 const ATCODER_CONTESTS_API_URL = "https://kenkoooo.com/atcoder/resources/contests.json";
 
@@ -484,6 +484,50 @@ function refreshCodeChefContestScores(contestCode) {
 
 function refreshSTART249ContestScores() {
   return refreshCodeChefContestScores("START249");
+}
+
+function refreshCurrentCodeChefContestScores() {
+  return refreshCodeChefContestScores(CODECHEF_CONTEST_CODE);
+}
+
+function refreshSTART250ContestScores() {
+  return refreshCodeChefContestScores("START250");
+}
+
+function createWeeklyCodeChefScoreTrigger() {
+  deleteWeeklyCodeChefScoreTrigger();
+  ScriptApp.newTrigger("refreshCurrentCodeChefContestScores")
+    .timeBased()
+    .onWeekDay(ScriptApp.WeekDay.WEDNESDAY)
+    .atHour(23)
+    .create();
+  return { created: true, functionName: "refreshCurrentCodeChefContestScores" };
+}
+
+function createTodayCodeChefScoreTrigger() {
+  const now = new Date();
+  const runAt = new Date(now);
+  runAt.setHours(22, 15, 0, 0);
+
+  if (runAt.getTime() <= now.getTime()) {
+    runAt.setTime(now.getTime() + 10 * 60 * 1000);
+  }
+
+  ScriptApp.newTrigger("refreshCurrentCodeChefContestScores")
+    .timeBased()
+    .at(runAt)
+    .create();
+  return { created: true, functionName: "refreshCurrentCodeChefContestScores", runAt };
+}
+
+function deleteWeeklyCodeChefScoreTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach((trigger) => {
+    if (trigger.getHandlerFunction() === "refreshCurrentCodeChefContestScores") {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+  return { deleted: true };
 }
 
 function refreshAtCoderContestScores(contestCode, contestName, fromSecond) {
