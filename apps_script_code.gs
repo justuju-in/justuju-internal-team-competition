@@ -302,44 +302,6 @@ function isAtCoderProfilePage(body, username) {
     new RegExp("<title>" + escaped + " - AtCoder</title>", "i").test(page);
 }
 
-function authorizeExternalRequests() {
-  const codeChef = fetchProfile("https://www.codechef.com/users/gummarajitha12");
-  const codeforces = fetchJson("https://codeforces.com/api/user.info?handles=rajithagumma22");
-  const leetCode = fetchJsonPost("https://leetcode.com/graphql", {
-      query: "query userProfile($username: String!) { matchedUser(username: $username) { username } }",
-      variables: { username: "rajithagumma22" }
-    }, {
-      "Content-Type": "application/json",
-      "Referer": "https://leetcode.com/rajithagumma22/"
-    });
-  const atCoder = fetchProfile("https://atcoder.jp/users/rajithagumma22");
-
-  const results = {
-    codeChef: {
-      ok: codeChef.ok,
-      code: codeChef.code,
-      profileDetected: isCodeChefProfilePage(codeChef.body, "gummarajitha12")
-    },
-    codeforces: {
-      ok: codeforces.ok,
-      code: codeforces.code,
-      status: codeforces.json && codeforces.json.status
-    },
-    leetCode: {
-      ok: leetCode.ok,
-      code: leetCode.code,
-      matchedUser: !!(leetCode.json && leetCode.json.data && leetCode.json.data.matchedUser)
-    },
-    atCoder: {
-      ok: atCoder.ok,
-      code: atCoder.code,
-      containsUsername: /rajithagumma22/i.test(atCoder.body || "")
-    }
-  };
-  Logger.log(JSON.stringify(results));
-  return results;
-}
-
 function updateProfileStats(email, name, team, handles) {
   const stats = collectProfileStats(handles);
   const row = [
@@ -511,17 +473,9 @@ function refreshCodeChefContestScores(contestCode) {
   return summary;
 }
 
-function refreshSTART249ContestScores() {
-  return refreshCodeChefContestScores("START249");
-}
-
 function refreshCurrentCodeChefContestScores() {
   const contest = getLatestCodeChefStartersContest();
   return refreshCodeChefContestScores(contest.baseCode);
-}
-
-function refreshSTART250ContestScores() {
-  return refreshCodeChefContestScores("START250");
 }
 
 function createWeeklyCodeChefScoreTrigger() {
@@ -533,27 +487,6 @@ function createWeeklyCodeChefScoreTrigger() {
     .nearMinute(5)
     .create();
   return { created: true, functionName: "refreshCurrentCodeChefContestScores" };
-}
-
-function createTodayCodeChefScoreTrigger() {
-  deleteCodeChefScoreTriggers();
-  const now = new Date();
-  const runAt = new Date(now);
-  runAt.setHours(22, 5, 0, 0);
-
-  if (runAt.getTime() <= now.getTime()) {
-    runAt.setTime(now.getTime() + 10 * 60 * 1000);
-  }
-
-  ScriptApp.newTrigger("refreshCurrentCodeChefContestScores")
-    .timeBased()
-    .at(runAt)
-    .create();
-  return { created: true, functionName: "refreshCurrentCodeChefContestScores", runAt };
-}
-
-function deleteWeeklyCodeChefScoreTrigger() {
-  return deleteCodeChefScoreTriggers();
 }
 
 function deleteCodeChefScoreTriggers() {
@@ -673,10 +606,6 @@ function deleteWeeklyAtCoderScoreTrigger() {
     }
   });
   return { deleted: true };
-}
-
-function refreshABC469ContestScores() {
-  return refreshAtCoderContestScores("abc469", "AtCoder Beginner Contest 469", 1785585600);
 }
 
 function getLatestAtCoderBeginnerContest() {
