@@ -468,14 +468,23 @@
       if (!urls.length) return null;
 
       const [members, profiles, scores, links] = await Promise.all([
-        loadCsv(CONFIG.membersCsvUrl),
-        loadCsv(CONFIG.profileStatsCsvUrl),
-        loadCsv(CONFIG.contestScoresCsvUrl),
-        loadCsv(CONFIG.contestLinksCsvUrl)
+        safeLoadCsv(CONFIG.membersCsvUrl),
+        safeLoadCsv(CONFIG.profileStatsCsvUrl),
+        safeLoadCsv(CONFIG.contestScoresCsvUrl),
+        safeLoadCsv(CONFIG.contestLinksCsvUrl)
       ]);
 
       if (!members.length && !profiles.length && !scores.length && !links.length) return null;
       return buildDataFromRows(members, profiles, scores, links);
+    }
+
+    async function safeLoadCsv(url) {
+      try {
+        return await loadCsv(url);
+      } catch (error) {
+        console.warn(error.message || error);
+        return [];
+      }
     }
 
     async function loadCsv(url) {
