@@ -467,12 +467,10 @@
       const urls = Object.values(CONFIG).filter(Boolean);
       if (!urls.length) return null;
 
-      const [members, profiles, scores, links] = await Promise.all([
-        safeLoadCsv(CONFIG.membersCsvUrl),
-        safeLoadCsv(CONFIG.profileStatsCsvUrl),
-        safeLoadCsv(CONFIG.contestScoresCsvUrl),
-        safeLoadCsv(CONFIG.contestLinksCsvUrl)
-      ]);
+      const members = await safeLoadCsv(CONFIG.membersCsvUrl);
+      const profiles = await safeLoadCsv(CONFIG.profileStatsCsvUrl);
+      const scores = await safeLoadCsv(CONFIG.contestScoresCsvUrl);
+      const links = await safeLoadCsv(CONFIG.contestLinksCsvUrl);
 
       if (!members.length && !profiles.length && !scores.length && !links.length) return null;
       return buildDataFromRows(members, profiles, scores, links);
