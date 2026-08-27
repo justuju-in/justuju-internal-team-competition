@@ -489,9 +489,15 @@
 
     async function loadCsv(url) {
       if (!url) return [];
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Could not load " + url);
-      return parseCsv(await response.text());
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 12000);
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error("Could not load " + url);
+        return parseCsv(await response.text());
+      } finally {
+        clearTimeout(timeout);
+      }
     }
 
     function parseCsv(text) {
