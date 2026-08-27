@@ -2,6 +2,7 @@ const SPREADSHEET_ID = "1lJTI63vyD5-beXWLTc61jv2-S8OLm28AeIuK4hJlo8o";
 const MEMBERS_SHEET = "Members";
 const STATS_SHEET = "Profile Stats";
 const CONTEST_SCORES_SHEET = "Contest Scores";
+const CONTEST_LINKS_SHEET = "Contest Links";
 const DOMJUDGE_BASE_URL = "https://judge.csbasics.in";
 const DOMJUDGE_CONTEST_ID = "1";
 const CODECHEF_CONTEST_CODE = "START250";
@@ -11,6 +12,7 @@ const ATCODER_CONTESTS_API_URL = "https://kenkoooo.com/atcoder/resources/contest
 
 const MEMBER_HEADERS = ["Timestamp", "Email", "Name", "Team", "CodeChef", "Codeforces", "LeetCode", "AtCoder", "DOMjudge"];
 const CONTEST_SCORE_HEADERS = ["Date", "Contest Code", "Contest Name", "Contest Link", "Name", "Team", "Problems Solved", "Attended", "Contest Rank", "Updated By", "Notes"];
+const CONTEST_LINK_HEADERS = ["Platform", "Contest Code", "Title", "Date", "Link", "Notes"];
 const STATS_HEADERS = [
   "Last Updated",
   "Email",
@@ -414,6 +416,8 @@ function createAllWeeklyAutomationTriggers() {
 
 function refreshCodeChefContestScores(contestCode) {
   const code = clean(contestCode) || CODECHEF_CONTEST_CODE;
+  const contestName = "CodeChef Starters " + code.replace(/^START/i, "");
+  const contestLink = "https://www.codechef.com/" + code;
   const members = getMembersForContestScores();
   const membersByHandle = {};
 
@@ -442,8 +446,6 @@ function refreshCodeChefContestScores(contestCode) {
   const rows = members.map((member) => {
     const handleKey = normalizeCodeChefHandle(member.codeChef);
     const result = foundByHandle[handleKey];
-    const contestName = "CodeChef Starters " + code.replace(/^START/i, "");
-    const contestLink = "https://www.codechef.com/" + code;
     const attended = !!result;
     const notes = result
       ? "Auto fetched from " + result.contestCode
@@ -465,6 +467,7 @@ function refreshCodeChefContestScores(contestCode) {
   });
 
   upsertContestScoreRows(code, rows);
+  upsertContestLinkRow("CodeChef", code, contestName, contestLink, "Auto fetched contest scores from CodeChef ranklist.");
   const summary = rows.reduce((acc, row) => {
     acc[row[4]] = { contestCode: row[1], solved: row[6], attended: row[7], rank: row[8], notes: row[10] };
     return acc;
@@ -576,6 +579,7 @@ function refreshAtCoderContestScores(contestCode, contestName, fromSecond) {
   });
 
   upsertContestScoreRows(code.toUpperCase(), rows);
+  upsertContestLinkRow("AtCoder", code.toUpperCase(), name, "https://atcoder.jp/contests/" + code, "AtCoder Beginner Contest scores count as half points.");
   const summary = rows.reduce((acc, row) => {
     acc[row[4]] = { contestCode: row[1], solved: row[6], attended: row[7], notes: row[10] };
     return acc;
@@ -814,6 +818,60 @@ function upsertContestScoreRows(baseContestCode, rows) {
       sheet.appendRow(row);
     }
   });
+}
+
+function syncContestLinksFromContestScores() {
+  const sheet = getContestScoresSheet();
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return { synced: 0 };
+
+  const headers = values[0].map(String);
+  const seen = {};
+  let synced = 0;
+
+  values.slice(1).forEach((row) => {
+    const code = valueByHeader(headers, row, "Contest Code");
+    if (!code || seen[code]) return;
+    seen[code] = true;
+
+    const name = valueByHeader(headers, row, "Contest Name") || code;
+    const link = valueByHeader(headers, row, "Contest Link");
+    const date = valueByHeader(headers, row, "Date");
+    const platform = /^ABC/i.test(code) ? "AtCoder" : "CodeChef";
+    const notes = platform === "AtCoder"
+      ? "AtCoder Beginner Contest scores count as half points."
+      : "Track only contest problems solved. Team rank changes by total score.";
+
+    upsertContestLinkRow(platform, code, name, link, notes, date);
+    synced += 1;
+  });
+
+  return { synced };
+}
+
+function upsertContestLinkRow(platform, code, title, link, notes, dateValue) {
+  const sheet = getContestLinksSheet();
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0].map(String);
+  const codeIndex = headers.indexOf("Contest Code");
+  const normalizedCode = clean(code).toUpperCase();
+  const existingRow = values.findIndex((row, index) => {
+    return index > 0 && clean(row[codeIndex]).toUpperCase() === normalizedCode;
+  });
+  const row = [
+    clean(platform),
+    normalizedCode,
+    clean(title) || normalizedCode,
+    dateValue || new Date(),
+    clean(link),
+    clean(notes)
+  ];
+
+  if (existingRow >= 1) {
+    sheet.getRange(existingRow + 1, 1, 1, CONTEST_LINK_HEADERS.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
 }
 
 function resetStatsSheet() {
@@ -1074,6 +1132,19 @@ function getContestScoresSheet() {
 
   ensureColumnCapacity(sheet, CONTEST_SCORE_HEADERS.length);
   ensureHeaders(sheet, CONTEST_SCORE_HEADERS);
+  return sheet;
+}
+
+function getContestLinksSheet() {
+  const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  let sheet = spreadsheet.getSheetByName(CONTEST_LINKS_SHEET);
+
+  if (!sheet) {
+    sheet = spreadsheet.insertSheet(CONTEST_LINKS_SHEET);
+  }
+
+  ensureColumnCapacity(sheet, CONTEST_LINK_HEADERS.length);
+  ensureHeaders(sheet, CONTEST_LINK_HEADERS);
   return sheet;
 }
 

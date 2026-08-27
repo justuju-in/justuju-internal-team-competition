@@ -559,6 +559,7 @@
         AtCoder: profile.atcoder_handle
       }));
 
+      const contestLinksByCode = new Map();
       const contestLinks = linkRows.length ? linkRows.map(row => ({
         label: field(row, ["Platform", "Label"]) || "CodeChef contest",
         code: field(row, ["Contest Code", "Code"]),
@@ -566,6 +567,7 @@
         url: field(row, ["Link", "URL"]),
         note: field(row, ["Notes", "Note"])
       })).filter(row => row.code) : DATA.contest_links;
+      contestLinks.forEach(row => contestLinksByCode.set(row.code, row));
 
       const contestByCode = new Map(DATA.contests.map(row => [row.code, { ...row }]));
       contestLinks.forEach(row => {
@@ -579,14 +581,16 @@
       });
       scoreRows.forEach(row => {
         const code = field(row, ["Contest Code", "Code"]);
-        if (!code || contestByCode.has(code)) return;
-        contestByCode.set(code, {
+        if (!code) return;
+        const discovered = {
           code,
           name: field(row, ["Contest Name", "Title"]) || code,
           url: field(row, ["Contest Link", "Link", "URL"]),
-          label: "CodeChef contest",
-          note: ""
-        });
+          label: /^ABC/i.test(code) ? "AtCoder" : "CodeChef",
+          note: /^ABC/i.test(code) ? "AtCoder Beginner Contest scores count as half points." : "Track only contest problems solved. Team rank changes by total score."
+        };
+        if (!contestByCode.has(code)) contestByCode.set(code, discovered);
+        if (!contestLinksByCode.has(code)) contestLinksByCode.set(code, discovered);
       });
 
       const scoreByMember = new Map();
@@ -635,7 +639,7 @@
         ...DATA,
         generated_at: new Date().toISOString(),
         contests: loadedContests,
-        contest_links: contestLinks,
+        contest_links: Array.from(contestLinksByCode.values()),
         teams: Array.from(teamsByName.values()),
         individual_leaderboard: individualRows,
         profile_stats: profileStats,
