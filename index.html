@@ -122,6 +122,21 @@
       margin: 12px 0;
       flex-wrap: wrap;
     }
+    .contest-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      font-weight: 700;
+      flex-wrap: wrap;
+    }
+    .contest-controls:empty { display: none; }
+    .contest-toggle { min-width: 190px; }
+    .contest-toggle .arrow {
+      display: inline-block;
+      margin-left: 6px;
+    }
     label {
       display: grid;
       gap: 5px;
@@ -233,6 +248,7 @@
     </div>
 
     <div class="tools">
+      <div class="contest-controls" id="contest-controls"></div>
       <label>Filter current table
         <input id="search" type="search" placeholder="Type to filter">
       </label>
@@ -316,8 +332,10 @@
       ]
     };
 
+    const LATEST_CONTEST_LIMIT = 4;
     let contests = [];
     let displayedContests = [];
+    let showAllContests = false;
     let currentView = "team";
     let query = "";
     const sortState = {
@@ -451,9 +469,18 @@
 
     function prepareData() {
       contests = DATA.contests.map(contest => contest.code);
-      displayedContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+      displayedContests = visibleContests();
       enrichIndividualsFromProfiles();
       DATA.team_leaderboard = buildTeamLeaderboard();
+    }
+
+    function visibleContests() {
+      const allContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+      return showAllContests ? allContests : allContests.slice(0, LATEST_CONTEST_LIMIT);
+    }
+
+    function refreshDisplayedContests() {
+      displayedContests = visibleContests();
     }
 
     async function init() {
@@ -685,7 +712,32 @@
       ].map(([label, value]) => `<div class="metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
     }
 
+    function renderContestControls() {
+      const controls = document.getElementById("contest-controls");
+      if (!["team", "individual"].includes(currentView) || contests.length <= LATEST_CONTEST_LIMIT) {
+        controls.innerHTML = "";
+        return;
+      }
+
+      const visibleCount = showAllContests ? contests.length : Math.min(LATEST_CONTEST_LIMIT, contests.length);
+      controls.innerHTML = `
+        <button class="contest-toggle" id="contest-toggle" type="button" aria-expanded="${showAllContests}">
+          ${showAllContests ? "Show latest " + LATEST_CONTEST_LIMIT : "Show older contests"}
+          <span class="arrow">${showAllContests ? "▴" : "▾"}</span>
+        </button>
+        <span>Showing ${visibleCount} of ${contests.length} contests</span>
+      `;
+    }
+
+    function resetHiddenContestSort(view) {
+      const key = sortState[view].key;
+      if (!key.startsWith("contest:")) return;
+      const visibleCodes = new Set(displayedContests.map(contest => contest.code));
+      if (!visibleCodes.has(key.slice(8))) sortState[view].key = "rank";
+    }
+
     function renderTeamTable() {
+      resetHiddenContestSort("team");
       const headers = [
         { label: "Rank", key: "rank", width: "7%" },
         { label: "Team", key: "team_name", text: true, width: "18%" },
@@ -718,6 +770,7 @@
     }
 
     function renderIndividualTable() {
+      resetHiddenContestSort("individual");
       const headers = [
         { label: "Rank", key: "rank", width: "7%" },
         { label: "Name", key: "name", text: true, width: "16%" },
@@ -807,6 +860,8 @@
     }
 
     function render() {
+      refreshDisplayedContests();
+      renderContestControls();
       renderSummary();
       renderTeamTable();
       renderIndividualTable();
@@ -822,6 +877,13 @@
     });
 
     document.addEventListener("click", event => {
+      const contestToggle = event.target.closest("#contest-toggle");
+      if (contestToggle) {
+        showAllContests = !showAllContests;
+        render();
+        return;
+      }
+
       const button = event.target.closest("[data-sort-view]");
       if (!button) return;
       const view = button.dataset.sortView;
@@ -846,6 +908,7 @@
         document.getElementById("individual-view").classList.toggle("hidden", currentView !== "individual");
         document.getElementById("roster-view").classList.toggle("hidden", currentView !== "roster");
         document.getElementById("links-view").classList.toggle("hidden", currentView !== "links");
+        render();
       });
     });
 
