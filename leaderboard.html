@@ -132,10 +132,15 @@
       flex-wrap: wrap;
     }
     .contest-controls:empty { display: none; }
-    .contest-toggle { min-width: 190px; }
-    .contest-toggle .arrow {
-      display: inline-block;
-      margin-left: 6px;
+    .contest-page-button {
+      min-width: 108px;
+      padding-inline: 10px;
+    }
+    .contest-page-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.45;
+      background: #f8fafc;
+      color: var(--muted);
     }
     label {
       display: grid;
@@ -332,10 +337,10 @@
       ]
     };
 
-    const LATEST_CONTEST_LIMIT = 4;
+    const CONTESTS_PER_PAGE = 4;
     let contests = [];
     let displayedContests = [];
-    let showAllContests = false;
+    let contestPage = 0;
     let currentView = "team";
     let query = "";
     const sortState = {
@@ -474,9 +479,19 @@
       DATA.team_leaderboard = buildTeamLeaderboard();
     }
 
+    function allDisplayContests() {
+      return DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
+    }
+
+    function maxContestPage() {
+      return Math.max(0, Math.ceil(allDisplayContests().length / CONTESTS_PER_PAGE) - 1);
+    }
+
     function visibleContests() {
-      const allContests = DATA.contests.map((contest, index) => ({ ...contest, testNumber: index + 1 })).reverse();
-      return showAllContests ? allContests : allContests.slice(0, LATEST_CONTEST_LIMIT);
+      const allContests = allDisplayContests();
+      contestPage = Math.max(0, Math.min(contestPage, maxContestPage()));
+      const start = contestPage * CONTESTS_PER_PAGE;
+      return allContests.slice(start, start + CONTESTS_PER_PAGE);
     }
 
     function refreshDisplayedContests() {
@@ -514,15 +529,28 @@
 
     async function loadCsv(url) {
       if (!url) return [];
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000);
-      try {
-        const response = await fetch(url, { signal: controller.signal });
-        if (!response.ok) throw new Error("Could not load " + url);
-        return parseCsv(await response.text());
-      } finally {
-        clearTimeout(timeout);
+      let lastError;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 12000);
+        try {
+          const separator = url.includes("?") ? "&" : "?";
+          const retryUrl = `${url}${separator}_=${Date.now()}-${attempt}`;
+          const response = await fetch(retryUrl, { signal: controller.signal });
+          if (!response.ok) throw new Error("Could not load " + url);
+          return parseCsv(await response.text());
+        } catch (error) {
+          lastError = error;
+          await delay(700 * (attempt + 1));
+        } finally {
+          clearTimeout(timeout);
+        }
       }
+      throw lastError;
+    }
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     function parseCsv(text) {
@@ -714,18 +742,23 @@
 
     function renderContestControls() {
       const controls = document.getElementById("contest-controls");
-      if (!["team", "individual"].includes(currentView) || contests.length <= LATEST_CONTEST_LIMIT) {
+      if (!["team", "individual"].includes(currentView) || contests.length <= CONTESTS_PER_PAGE) {
         controls.innerHTML = "";
         return;
       }
 
-      const visibleCount = showAllContests ? contests.length : Math.min(LATEST_CONTEST_LIMIT, contests.length);
+      const pageStart = contestPage * CONTESTS_PER_PAGE + 1;
+      const pageEnd = Math.min(pageStart + displayedContests.length - 1, contests.length);
+      const latestDisabled = contestPage === 0 ? "disabled" : "";
+      const olderDisabled = contestPage >= maxContestPage() ? "disabled" : "";
       controls.innerHTML = `
-        <button class="contest-toggle" id="contest-toggle" type="button" aria-expanded="${showAllContests}">
-          ${showAllContests ? "Show latest " + LATEST_CONTEST_LIMIT : "Show older contests"}
-          <span class="arrow">${showAllContests ? "▴" : "▾"}</span>
+        <button class="contest-page-button" data-contest-page="newer" type="button" ${latestDisabled} aria-label="Show newer contests">
+          &lsaquo; Newer
         </button>
-        <span>Showing ${visibleCount} of ${contests.length} contests</span>
+        <span>Showing contests ${pageStart}-${pageEnd} of ${contests.length}</span>
+        <button class="contest-page-button" data-contest-page="older" type="button" ${olderDisabled} aria-label="Show older contests">
+          Older &rsaquo;
+        </button>
       `;
     }
 
@@ -877,9 +910,11 @@
     });
 
     document.addEventListener("click", event => {
-      const contestToggle = event.target.closest("#contest-toggle");
-      if (contestToggle) {
-        showAllContests = !showAllContests;
+      const contestPager = event.target.closest("[data-contest-page]");
+      if (contestPager) {
+        const direction = contestPager.dataset.contestPage;
+        contestPage += direction === "older" ? 1 : -1;
+        contestPage = Math.max(0, Math.min(contestPage, maxContestPage()));
         render();
         return;
       }
