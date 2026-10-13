@@ -509,10 +509,12 @@
       const urls = Object.values(CONFIG).filter(Boolean);
       if (!urls.length) return null;
 
-      const members = await safeLoadCsv(CONFIG.membersCsvUrl);
-      const profiles = await safeLoadCsv(CONFIG.profileStatsCsvUrl);
-      const scores = await safeLoadCsv(CONFIG.contestScoresCsvUrl);
-      const links = await safeLoadCsv(CONFIG.contestLinksCsvUrl);
+      const [members, profiles, scores, links] = await Promise.all([
+        safeLoadCsv(CONFIG.membersCsvUrl),
+        safeLoadCsv(CONFIG.profileStatsCsvUrl),
+        safeLoadCsv(CONFIG.contestScoresCsvUrl),
+        safeLoadCsv(CONFIG.contestLinksCsvUrl)
+      ]);
 
       if (!members.length && !profiles.length && !scores.length && !links.length) return null;
       return buildDataFromRows(members, profiles, scores, links);
@@ -530,18 +532,16 @@
     async function loadCsv(url) {
       if (!url) return [];
       let lastError;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
+      for (let attempt = 0; attempt < 2; attempt += 1) {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 12000);
+        const timeout = setTimeout(() => controller.abort(), 7000);
         try {
-          const separator = url.includes("?") ? "&" : "?";
-          const retryUrl = `${url}${separator}_=${Date.now()}-${attempt}`;
-          const response = await fetch(retryUrl, { signal: controller.signal });
+          const response = await fetch(url, { signal: controller.signal, cache: "no-store" });
           if (!response.ok) throw new Error("Could not load " + url);
           return parseCsv(await response.text());
         } catch (error) {
           lastError = error;
-          await delay(700 * (attempt + 1));
+          if (attempt === 0) await delay(500);
         } finally {
           clearTimeout(timeout);
         }
