@@ -176,13 +176,17 @@
       font-variant-numeric: tabular-nums;
       font-size: 0.88rem;
     }
+    #team-table, #individual-table { min-width: 1080px; }
+    #roster-table { min-width: 620px; }
+    #links-table { min-width: 760px; }
     th, td {
       padding: 9px 10px;
       border-bottom: 1px solid var(--line);
       text-align: right;
       vertical-align: top;
       white-space: normal;
-      overflow-wrap: anywhere;
+      overflow-wrap: normal;
+      word-break: normal;
     }
     th {
       background: var(--slate-deep);
